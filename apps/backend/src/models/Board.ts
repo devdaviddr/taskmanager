@@ -41,14 +41,15 @@ export class BoardModel {
               'title', i.title,
               'description', i.description,
               'position', i.position,
+              'archived', i.archived,
               'created_at', i.created_at,
               'updated_at', i.updated_at
             ) ORDER BY i.position
-          ) FILTER (WHERE i.id IS NOT NULL),
+          ) FILTER (WHERE i.id IS NOT NULL AND i.archived = FALSE),
           '[]'::json
         ) as items
       FROM columns c
-      LEFT JOIN items i ON c.id = i.column_id
+      LEFT JOIN items i ON c.id = i.column_id AND i.archived = FALSE
       WHERE c.board_id = $1
       GROUP BY c.id, c.board_id, c.name, c.position, c.created_at, c.updated_at
       ORDER BY c.position

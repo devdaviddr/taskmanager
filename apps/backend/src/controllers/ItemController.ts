@@ -76,6 +76,27 @@ export class ItemController {
     }
   }
 
+  static async archive(c: Context) {
+    try {
+      const id = parseInt(c.req.param('id'));
+      if (isNaN(id)) {
+        return c.json({ error: 'Invalid item ID' }, 400);
+      }
+
+      const body = await c.req.json();
+      const archived = body.archived !== undefined ? body.archived : true;
+
+      const item = await ItemService.archiveItem(id, archived);
+      return c.json(item);
+    } catch (error) {
+      console.error('Controller error - archive item:', error);
+      if (error instanceof Error && error.message === 'Item not found') {
+        return c.json({ error: error.message }, 404);
+      }
+      return c.json({ error: 'Internal server error' }, 500);
+    }
+  }
+
   static async move(c: Context) {
     try {
       const id = parseInt(c.req.param('id'));

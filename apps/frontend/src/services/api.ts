@@ -31,6 +31,7 @@ export const itemsAPI = {
   getByColumn: (columnId: number) => api.get(`/columns/${columnId}/items`),
   create: (columnId: number, data: { title: string; description?: string; position?: number }) => api.post(`/columns/${columnId}/items`, data),
   update: (id: number, data: { title?: string; description?: string; position?: number }) => api.put(`/items/${id}`, data),
+  archive: (id: number, archived: boolean = true) => api.put(`/items/${id}/archive`, { archived }),
   delete: (id: number) => api.delete(`/items/${id}`),
   move: (id: number, data: { column_id: number; position: number }) => api.put(`/items/${id}/move`, data),
 }

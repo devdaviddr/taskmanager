@@ -76,6 +76,22 @@ export class ItemService {
     }
   }
 
+  static async archiveItem(id: number, archived: boolean = true): Promise<Item> {
+    try {
+      const item = await ItemModel.archive(id, archived);
+      if (!item) {
+        throw new Error('Item not found');
+      }
+      return item;
+    } catch (error) {
+      console.error('Service error - archiveItem:', error);
+      if (error instanceof Error && error.message === 'Item not found') {
+        throw error;
+      }
+      throw new Error('Failed to archive item');
+    }
+  }
+
   static async moveItem(id: number, moveData: MoveItemRequest): Promise<Item> {
     try {
       const item = await ItemModel.moveItem(id, moveData);

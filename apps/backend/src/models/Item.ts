@@ -4,9 +4,9 @@ import type { Item, CreateItemRequest, MoveItemRequest } from '../types';
 export class ItemModel {
   static async findByColumnId(columnId: number): Promise<Item[]> {
     const result = await pool.query(`
-      SELECT id, column_id, title, description, position, created_at, updated_at
+      SELECT id, column_id, title, description, position, archived, created_at, updated_at
       FROM items
-      WHERE column_id = $1
+      WHERE column_id = $1 AND archived = FALSE
       ORDER BY position
     `, [columnId]);
     return result.rows;
@@ -14,7 +14,7 @@ export class ItemModel {
 
   static async findById(id: number): Promise<Item | null> {
     const result = await pool.query(`
-      SELECT id, column_id, title, description, position, created_at, updated_at
+      SELECT id, column_id, title, description, position, archived, created_at, updated_at
       FROM items
       WHERE id = $1
     `, [id]);
@@ -32,9 +32,9 @@ export class ItemModel {
     const position = itemData.position ?? positionResult.rows[0].next_position;
 
     const result = await pool.query(`
-      INSERT INTO items (column_id, title, description, position, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, NOW(), NOW())
-      RETURNING id, column_id, title, description, position, created_at, updated_at
+      INSERT INTO items (column_id, title, description, position, archived, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, FALSE, NOW(), NOW())
+      RETURNING id, column_id, title, description, position, archived, created_at, updated_at
     `, [columnId, itemData.title, itemData.description || null, position]);
     return result.rows[0];
   }
@@ -73,7 +73,7 @@ export class ItemModel {
       UPDATE items
       SET ${fields.join(', ')}
       WHERE id = $${paramCount}
-      RETURNING id, column_id, title, description, position, created_at, updated_at
+      RETURNING id, column_id, title, description, position, archived, created_at, updated_at
     `, values);
 
     return result.rows[0] || null;
@@ -82,6 +82,16 @@ export class ItemModel {
   static async delete(id: number): Promise<boolean> {
     const result = await pool.query('DELETE FROM items WHERE id = $1', [id]);
     return (result.rowCount ?? 0) > 0;
+  }
+
+  static async archive(id: number, archived: boolean = true): Promise<Item | null> {
+    const result = await pool.query(`
+      UPDATE items
+      SET archived = $1, updated_at = NOW()
+      WHERE id = $2
+      RETURNING id, column_id, title, description, position, archived, created_at, updated_at
+    `, [archived, id]);
+    return result.rows[0] || null;
   }
 
   static async moveItem(id: number, moveData: MoveItemRequest): Promise<Item | null> {
@@ -142,7 +152,7 @@ export class ItemModel {
         UPDATE items
         SET column_id = $1, position = $2, updated_at = NOW()
         WHERE id = $3
-        RETURNING id, column_id, title, description, position, created_at, updated_at
+        RETURNING id, column_id, title, description, position, archived, created_at, updated_at
       `, [newColumnId, newPosition, id]);
 
       await client.query('COMMIT');

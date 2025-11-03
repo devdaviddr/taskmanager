@@ -33,6 +33,7 @@ interface Item {
   title: string
   description?: string
   position: number
+  archived: boolean
   created_at: string
   updated_at: string
 }
@@ -43,6 +44,10 @@ export default function BoardPage() {
   const boardId = parseInt(id || '0')
 
   const [newItemTitles, setNewItemTitles] = useState<Record<number, string>>({})
+  const [selectedCard, setSelectedCard] = useState<Item | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
 
   const { data: board, isLoading, error } = useQuery({
     queryKey: ['board', boardId],
@@ -62,6 +67,15 @@ export default function BoardPage() {
     },
   })
 
+  const updateItemMutation = useMutation({
+    mutationFn: ({ id, title, description }: { id: number; title: string; description: string }) =>
+      itemsAPI.update(id, { title, description }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
+      handleCloseModal()
+    },
+  })
+
   const moveItemMutation = useMutation({
     mutationFn: ({ itemId, columnId, position }: { itemId: number; columnId: number; position: number }) =>
       itemsAPI.move(itemId, { column_id: columnId, position }),
@@ -70,7 +84,7 @@ export default function BoardPage() {
     },
     onError: (error) => {
       console.error('Failed to move item:', error)
-      // Re-fetch data to revert any optimistic updates
+      // Revert the optimistic update if needed
       queryClient.invalidateQueries({ queryKey: ['board', boardId] })
     },
   })
@@ -78,6 +92,75 @@ export default function BoardPage() {
   const handleCreateItem = (columnId: number, title: string) => {
     if (title.trim()) {
       createItemMutation.mutate({ columnId, title: title.trim() })
+    }
+  }
+
+  const handleCardClick = (item: Item) => {
+    setSelectedCard(item)
+    setEditTitle(item.title)
+    setEditDescription(item.description || '')
+    setIsModalOpen(true)
+  }
+
+  const handleSaveCard = () => {
+    if (selectedCard) {
+      updateItemMutation.mutate({
+        id: selectedCard.id,
+        title: editTitle,
+        description: editDescription,
+      })
+    }
+  }
+
+  const deleteItemMutation = useMutation({
+    mutationFn: (id: number) => itemsAPI.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
+      handleCloseModal()
+    },
+    onError: (error) => {
+      console.error('Failed to delete item:', error)
+    },
+  })
+
+  const archiveItemMutation = useMutation({
+    mutationFn: ({ id, archived }: { id: number; archived: boolean }) => itemsAPI.archive(id, archived),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
+      handleCloseModal()
+    },
+    onError: (error) => {
+      console.error('Failed to archive item:', error)
+    },
+  })
+
+  const handleDeleteCard = () => {
+    if (selectedCard && window.confirm('Are you sure you want to delete this card? This action cannot be undone.')) {
+      deleteItemMutation.mutate(selectedCard.id)
+    }
+  }
+
+  const handleArchiveCard = () => {
+    if (selectedCard) {
+      const shouldArchive = !selectedCard.archived
+      const action = shouldArchive ? 'archive' : 'unarchive'
+      if (window.confirm(`Are you sure you want to ${action} this card?`)) {
+        archiveItemMutation.mutate({ id: selectedCard.id, archived: shouldArchive })
+      }
+    }
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedCard(null)
+    setEditTitle('')
+    setEditDescription('')
+  }
+
+  const handleItemSubmit = (columnId: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const title = newItemTitles[columnId] || ''
+      handleCreateItem(columnId, title)
     }
   }
 
@@ -99,13 +182,6 @@ export default function BoardPage() {
       columnId: destColumnId,
       position: destination.index,
     })
-  }
-
-  const handleItemSubmit = (columnId: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      const title = newItemTitles[columnId] || ''
-      handleCreateItem(columnId, title)
-    }
   }
 
   if (isLoading) {
@@ -146,7 +222,7 @@ export default function BoardPage() {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`bg-white rounded-lg p-2 w-80 h-[30vh] transition-all duration-200 border-2 ${
+                    className={`bg-white rounded-lg p-2 w-80 transition-all duration-200 border-2 ${
                       snapshot.isDraggingOver ? 'border-blue-400 shadow-inner' : 'border-gray-200'
                     }`}
                   >
@@ -168,6 +244,7 @@ export default function BoardPage() {
                                 className={`bg-white p-2 rounded shadow-sm border cursor-move hover:shadow-md transition-all duration-200 ${
                                   snapshot.isDragging ? 'rotate-2 shadow-xl scale-105 bg-blue-50 border-blue-300' : ''
                                 }`}
+                                onClick={() => handleCardClick(item)}
                               >
                                 <h4 className="font-medium text-gray-900 mb-1">{item.title}</h4>
                                 {item.description && (
@@ -199,6 +276,88 @@ export default function BoardPage() {
             ))}
         </DragDropContext>
       </div>
+
+      {/* Card Edit Modal */}
+      {isModalOpen && selectedCard && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Edit Card</h2>
+              <button
+                onClick={handleCloseModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="text-xs text-gray-400">
+                Created: {new Date(selectedCard.created_at).toLocaleDateString()}
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center mt-6">
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleArchiveCard}
+                  disabled={archiveItemMutation.isPending}
+                  className="px-4 py-2 text-sm font-medium text-orange-600 bg-orange-50 border border-orange-300 rounded-md hover:bg-orange-100 disabled:opacity-50"
+                >
+                  {archiveItemMutation.isPending ? 'Archiving...' : (selectedCard?.archived ? 'Unarchive' : 'Archive')}
+                </button>
+                <button
+                  onClick={handleDeleteCard}
+                  disabled={deleteItemMutation.isPending}
+                  className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-300 rounded-md hover:bg-red-100 disabled:opacity-50"
+                >
+                  {deleteItemMutation.isPending ? 'Deleting...' : 'Delete Card'}
+                </button>
+              </div>
+
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleCloseModal}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveCard}
+                  disabled={updateItemMutation.isPending}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {updateItemMutation.isPending ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   )
 }

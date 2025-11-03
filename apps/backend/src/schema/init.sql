@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS items (
   title VARCHAR(255) NOT NULL,
   description TEXT,
   position INTEGER NOT NULL DEFAULT 0,
+  archived BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -53,3 +54,6 @@ CREATE INDEX IF NOT EXISTS idx_columns_board_id ON columns(board_id);
 CREATE INDEX IF NOT EXISTS idx_columns_position ON columns(board_id, position);
 CREATE INDEX IF NOT EXISTS idx_items_column_id ON items(column_id);
 CREATE INDEX IF NOT EXISTS idx_items_position ON items(column_id, position);
+
+-- Add archived column to items table if it doesn't exist (for migrations)
+ALTER TABLE items ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE;
