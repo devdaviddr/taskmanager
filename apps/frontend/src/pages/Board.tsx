@@ -49,7 +49,6 @@ export default function BoardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   const { data: board, isLoading, error } = useQuery({
     queryKey: ['board', boardId],
@@ -74,15 +73,6 @@ export default function BoardPage() {
       columnsAPI.create(boardId, { name, position }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board', boardId] })
-    },
-  })
-
-  const updateBoardMutation = useMutation({
-    mutationFn: ({ id, background }: { id: number; background: string }) =>
-      boardsAPI.update(id, { background }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
-      setIsSettingsOpen(false)
     },
   })
 
@@ -234,19 +224,8 @@ export default function BoardPage() {
 
   return (
     <PageLayout background={board.background || 'bg-white'}>
-      <div className="mb-6 relative">
+      <div className="mb-6">
         <PageHeader title={board.name} />
-        <div className="absolute top-0 right-0">
-          {isSettingsOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-              <div className="p-2">
-                <p className="text-sm font-medium text-gray-700 mb-2">Board Background</p>
-                <div className="space-y-1">
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
 
       <div className="overflow-x-auto overflow-y-hidden">
@@ -323,10 +302,18 @@ export default function BoardPage() {
                     </Droppable>
                   </div>
                 ))}
-            </div>
-          </DragDropContext>
-        </div>
-      </div>
+             </div>
+           </DragDropContext>
+           <div className="flex items-start ml-6">
+             <button
+               onClick={() => handleAddColumn(board.columns.length)}
+               className="w-80 h-16 border-2 border-dashed border-white/40 rounded-lg flex items-center justify-center text-white/60 hover:text-white hover:border-white/60 transition-colors bg-transparent"
+             >
+               + Add Column
+             </button>
+           </div>
+         </div>
+       </div>
 
       {/* Card Edit Modal */}
       {isModalOpen && selectedCard && (
