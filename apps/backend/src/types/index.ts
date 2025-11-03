@@ -23,3 +23,58 @@ export interface HealthResponse {
   database: string;
   timestamp: string;
 }
+
+// New types for boards feature
+export interface Board {
+  id: number;
+  name: string;
+  description?: string;
+  user_id: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface Column {
+  id: number;
+  board_id: number;
+  name: string;
+  position: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface Item {
+  id: number;
+  column_id: number;
+  title: string;
+  description?: string;
+  position: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// Request/Response types
+export interface CreateBoardRequest {
+  name: string;
+  description?: string;
+}
+
+export interface CreateColumnRequest {
+  name: string;
+  position?: number;
+}
+
+export interface CreateItemRequest {
+  title: string;
+  description?: string;
+  position?: number;
+}
+
+export interface MoveItemRequest {
+  column_id: number;
+  position: number;
+}
+
+export interface BoardWithColumns extends Board {
+  columns: (Column & { items: Item[] })[];
+}

@@ -1,5 +1,8 @@
 import { Hono } from 'hono';
 import taskRoutes from './tasks';
+import boardRoutes from './boards';
+import columnRoutes from './columns';
+import itemRoutes from './items';
 
 const router = new Hono();
 
@@ -24,7 +27,10 @@ router.get('/health', async (c) => {
   }
 });
 
-// Mount task routes
+// Mount routes
 router.route('/', taskRoutes);
+router.route('/', boardRoutes);
+router.route('/', columnRoutes);
+router.route('/', itemRoutes);
 
 export default router;

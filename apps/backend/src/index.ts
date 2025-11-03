@@ -1,10 +1,14 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { serve } from '@hono/node-server';
 import { testConnection } from './config/database';
 import routes from './routes';
 import { errorHandler, logger } from './middleware';
 
 const app = new Hono();
+
+// CORS middleware
+app.use('*', cors());
 
 // Middleware
 app.use('*', errorHandler);
