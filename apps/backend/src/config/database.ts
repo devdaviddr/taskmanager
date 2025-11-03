@@ -1,0 +1,19 @@
+import { Pool } from 'pg';
+
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+export const testConnection = async (): Promise<void> => {
+  try {
+    await pool.query('SELECT 1');
+    console.log('✅ Successfully connected to PostgreSQL');
+  } catch (error) {
+    console.error('❌ Failed to connect to PostgreSQL:', (error as Error).message);
+    throw error;
+  }
+};
+
+export const closeConnection = async (): Promise<void> => {
+  await pool.end();
+};

@@ -1,0 +1,30 @@
+import { Hono } from 'hono';
+import taskRoutes from './tasks';
+
+const router = new Hono();
+
+// Health check route
+router.get('/health', async (c) => {
+  try {
+    // Import pool dynamically to avoid circular dependency
+    const { pool } = await import('../config/database');
+    await pool.query('SELECT 1');
+    return c.json({
+      status: 'ok',
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    return c.json({
+      status: 'error',
+      database: 'disconnected',
+      error: (error as Error).message,
+      timestamp: new Date().toISOString()
+    }, 500);
+  }
+});
+
+// Mount task routes
+router.route('/', taskRoutes);
+
+export default router;
