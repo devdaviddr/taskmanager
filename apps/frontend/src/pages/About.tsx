@@ -11,7 +11,7 @@ export default function About() {
 
   return (
     <PageLayout>
-      <PageHeader title="About" description="System information and status." />
+      <PageHeader title="About" />
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div className="bg-white overflow-hidden shadow rounded-lg">

@@ -11,6 +11,7 @@ interface Board {
   id: number
   name: string
   description?: string
+  background?: string
   user_id: number
   created_at: string
   updated_at: string
@@ -48,6 +49,7 @@ export default function BoardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   const { data: board, isLoading, error } = useQuery({
     queryKey: ['board', boardId],
@@ -75,6 +77,15 @@ export default function BoardPage() {
     },
   })
 
+  const updateBoardMutation = useMutation({
+    mutationFn: ({ id, background }: { id: number; background: string }) =>
+      boardsAPI.update(id, { background }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
+      setIsSettingsOpen(false)
+    },
+  })
+
   const updateItemMutation = useMutation({
     mutationFn: ({ id, title, description }: { id: number; title: string; description: string }) =>
       itemsAPI.update(id, { title, description }),
@@ -93,18 +104,6 @@ export default function BoardPage() {
     onError: (error) => {
       console.error('Failed to move item:', error)
       // Revert the optimistic update if needed
-      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
-    },
-  })
-
-  const moveColumnMutation = useMutation({
-    mutationFn: ({ id, position }: { id: number; position: number }) =>
-      columnsAPI.move(id, position),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
-    },
-    onError: (error) => {
-      console.error('Failed to move column:', error)
       queryClient.invalidateQueries({ queryKey: ['board', boardId] })
     },
   })
@@ -199,28 +198,22 @@ export default function BoardPage() {
       return
     }
 
-    if (draggableId.startsWith('column-')) {
-      // Column drag
-      const columnId = parseInt(draggableId.replace('column-', ''))
-      moveColumnMutation.mutate({ id: columnId, position: destination.index })
-    } else {
-      // Item drag
-      const itemId = parseInt(draggableId)
-      const destColumnId = parseInt(destination.droppableId)
+    // Item drag
+    const itemId = parseInt(draggableId)
+    const destColumnId = parseInt(destination.droppableId)
 
-      // Optimistically update the UI immediately
-      moveItemMutation.mutate({
-        itemId,
-        columnId: destColumnId,
-        position: destination.index,
-      })
-    }
+    // Optimistically update the UI immediately
+    moveItemMutation.mutate({
+      itemId,
+      columnId: destColumnId,
+      position: destination.index,
+    })
   }
 
   if (isLoading) {
     return (
       <PageLayout>
-        <PageHeader title="Loading..." description="Loading board data" />
+        <PageHeader title="Loading..." />
         <div className="flex justify-center items-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -231,7 +224,7 @@ export default function BoardPage() {
   if (error || !board) {
     return (
       <PageLayout>
-        <PageHeader title="Error" description="Failed to load board" />
+        <PageHeader title="Error" />
         <div className="text-center py-12">
           <p className="text-red-600">Failed to load board. Please try again.</p>
         </div>
@@ -240,98 +233,97 @@ export default function BoardPage() {
   }
 
   return (
-    <PageLayout>
-      <div className="mb-6">
-        <PageHeader title={board.name} description={board.description || 'Manage your board tasks'} />
+    <PageLayout background={board.background || 'bg-white'}>
+      <div className="mb-6 relative">
+        <PageHeader title={board.name} />
+        <div className="absolute top-0 right-0">
+          {isSettingsOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+              <div className="p-2">
+                <p className="text-sm font-medium text-gray-700 mb-2">Board Background</p>
+                <div className="space-y-1">
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="flex pb-6 bg-white min-w-max">
+      <div className="overflow-x-auto overflow-y-hidden">
+        <div className="flex pb-6 min-w-max">
           <button
             onClick={() => handleAddColumn(0)}
-            className="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 mr-6"
+            className="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-white/80 transition-colors flex-shrink-0 mr-6"
           >
             +
           </button>
           <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="columns" direction="horizontal">
-              {(provided) => (
-                <div ref={provided.innerRef} {...provided.droppableProps} className="flex space-x-6">
-                  {board.columns
-                    .sort((a, b) => a.position - b.position)
-                    .map((column, index) => (
-                      <Draggable key={column.id} draggableId={`column-${column.id}`} index={index}>
-                        {(provided) => (
-                          <div ref={provided.innerRef} {...provided.draggableProps} className="flex items-start">
-                            <div className="bg-white rounded-lg p-2 w-80 transition-all duration-200">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center">
-                                  <div {...provided.dragHandleProps} className="cursor-move mr-2 text-gray-400 hover:text-gray-600">
-                                    ⋮⋮
-                                  </div>
-                                  <h3 className="font-semibold text-gray-900">{column.name}</h3>
-                                </div>
-                                <span className="text-sm text-gray-500">{column.items.length}</span>
-                              </div>
-
-                              <Droppable key={column.id} droppableId={column.id.toString()}>
-                                {(provided) => (
-                                  <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-1">
-                                    {column.items
-                                      .sort((a, b) => a.position - b.position)
-                                      .map((item, itemIndex) => (
-                                        <Draggable key={item.id} draggableId={item.id.toString()} index={itemIndex}>
-                                          {(provided, snapshot) => (
-                                            <div
-                                              ref={provided.innerRef}
-                                              {...provided.draggableProps}
-                                              {...provided.dragHandleProps}
-                                              className={`bg-white p-2 rounded shadow-sm border cursor-move hover:shadow-md transition-all duration-200 ${
-                                                snapshot.isDragging ? 'rotate-2 shadow-xl scale-105 bg-blue-50 border-blue-300' : ''
-                                              }`}
-                                              onClick={() => handleCardClick(item)}
-                                            >
-                                              <h4 className="font-medium text-gray-900 mb-1">{item.title}</h4>
-                                              {item.description && (
-                                                <p className="text-sm text-gray-600">{item.description}</p>
-                                              )}
-                                              <div className="text-xs text-gray-400 mt-1">
-                                                {new Date(item.created_at).toLocaleDateString()}
-                                              </div>
-                                            </div>
-                                          )}
-                                        </Draggable>
-                                      ))}
-                                    {provided.placeholder}
-                                  </div>
-                                )}
-                              </Droppable>
-
-                              <div className="mt-2">
-                                <input
-                                  type="text"
-                                  placeholder="Add a card..."
-                                  value={newItemTitles[column.id] || ''}
-                                  onChange={(e) => setNewItemTitles(prev => ({ ...prev, [column.id]: e.target.value }))}
-                                  onKeyPress={(e) => handleItemSubmit(column.id, e)}
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                              </div>
+            <div className="flex space-x-6">
+              {board.columns
+                .sort((a, b) => a.position - b.position)
+                .map((column) => (
+                  <div key={column.id} className="flex items-start">
+                    <Droppable droppableId={column.id.toString()}>
+                      {(droppableProvided, snapshot) => (
+                        <div
+                          ref={droppableProvided.innerRef}
+                          {...droppableProvided.droppableProps}
+                          className={`rounded-lg p-2 w-80 transition-all duration-200 border border-gray-200 ${
+                            snapshot.isDraggingOver ? 'bg-blue-50 border-blue-400' : 'bg-black/60'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center">
+                              <h3 className="font-semibold text-white">{column.name}</h3>
                             </div>
-                            <button
-                              onClick={() => handleAddColumn(column.position + 1)}
-                              className="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 ml-6"
-                            >
-                              +
-                            </button>
+                            <span className="text-sm text-white/80">{column.items.length}</span>
                           </div>
-                        )}
-                      </Draggable>
-                    ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
+
+                          <div className="space-y-1">
+                            {column.items
+                              .sort((a, b) => a.position - b.position)
+                              .map((item, itemIndex) => (
+                                <Draggable key={item.id} draggableId={item.id.toString()} index={itemIndex}>
+                                  {(itemProvided, itemSnapshot) => (
+                                    <div
+                                      ref={itemProvided.innerRef}
+                                      {...itemProvided.draggableProps}
+                                      {...itemProvided.dragHandleProps}
+                                      className={`bg-black/70 p-2 rounded shadow-sm border cursor-move hover:shadow-md transition-all duration-200 ${
+                                        itemSnapshot.isDragging ? 'rotate-2 shadow-xl scale-105 bg-blue-50 border-blue-300' : ''
+                                      }`}
+                                      onClick={() => handleCardClick(item)}
+                                    >
+                                      <h4 className="font-medium text-white mb-1">{item.title}</h4>
+                                      {item.description && (
+                                        <p className="text-sm text-white/80">{item.description}</p>
+                                      )}
+                                      <div className="text-xs text-white/60 mt-1">
+                                        {new Date(item.created_at).toLocaleDateString()}
+                                      </div>
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))}
+                            {droppableProvided.placeholder}
+                          </div>
+
+                          <div className="mt-2">
+                            <input
+                              type="text"
+                              placeholder="Add a card..."
+                              value={newItemTitles[column.id] || ''}
+                              onChange={(e) => setNewItemTitles(prev => ({ ...prev, [column.id]: e.target.value }))}
+                              onKeyPress={(e) => handleItemSubmit(column.id, e)}
+                              className="w-full px-2 py-1 bg-black/50 border border-white/20 rounded text-sm text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </Droppable>
+                  </div>
+                ))}
+            </div>
           </DragDropContext>
         </div>
       </div>

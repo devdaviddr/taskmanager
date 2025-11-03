@@ -29,9 +29,16 @@ export interface Board {
   id: number;
   name: string;
   description?: string;
+  background?: string;
   user_id: number;
   created_at: Date;
   updated_at: Date;
+}
+
+export interface CreateBoardRequest {
+  name: string;
+  description?: string;
+  background?: string;
 }
 
 export interface Column {

@@ -8,7 +8,7 @@ export default function Settings() {
 
   return (
     <PageLayout>
-      <PageHeader title="Settings" description="Manage your account and application preferences." />
+      <PageHeader title="Settings" />
 
       <div className="mt-8 space-y-6">
         {/* Account Settings */}

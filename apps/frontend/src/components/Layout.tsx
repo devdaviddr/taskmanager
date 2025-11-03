@@ -18,7 +18,7 @@ export default function Layout() {
 
       <div className="flex h-[calc(100vh-4rem)]">
         <Sidebar />
-        <main className="flex-1 pt-4 pb-6 sm:px-6 lg:px-8 overflow-auto">
+        <main className="flex-1 overflow-x-auto overflow-y-hidden">
           <Outlet />
         </main>
       </div>
