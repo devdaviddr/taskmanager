@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS boards (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   description TEXT,
-  background VARCHAR(255) DEFAULT 'bg-white',
+  background VARCHAR(255) DEFAULT 'bg-gray-50',
+  column_theme VARCHAR(255) DEFAULT 'dark',
   user_id INTEGER NOT NULL DEFAULT 1, -- Default user for now
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -60,7 +61,10 @@ CREATE INDEX IF NOT EXISTS idx_items_position ON items(column_id, position);
 ALTER TABLE items ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Add background column to boards table if it doesn't exist (for migrations)
-ALTER TABLE boards ADD COLUMN IF NOT EXISTS background VARCHAR(255) DEFAULT 'bg-white';
+ALTER TABLE boards ADD COLUMN IF NOT EXISTS background VARCHAR(255) DEFAULT 'bg-gray-50';
+
+-- Add column_theme column to boards table if it doesn't exist (for migrations)
+ALTER TABLE boards ADD COLUMN IF NOT EXISTS column_theme VARCHAR(255) DEFAULT 'dark';
 
 -- Set default background for existing boards
-UPDATE boards SET background = 'bg-white' WHERE background IS NULL;
+UPDATE boards SET background = 'bg-gray-50' WHERE background IS NULL;

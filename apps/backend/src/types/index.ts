@@ -30,6 +30,7 @@ export interface Board {
   name: string;
   description?: string;
   background?: string;
+  column_theme?: string;
   user_id: number;
   created_at: Date;
   updated_at: Date;
@@ -39,6 +40,7 @@ export interface CreateBoardRequest {
   name: string;
   description?: string;
   background?: string;
+  column_theme?: string;
 }
 
 export interface Column {
@@ -61,11 +63,6 @@ export interface Item {
 }
 
 // Request/Response types
-export interface CreateBoardRequest {
-  name: string;
-  description?: string;
-}
-
 export interface CreateColumnRequest {
   name: string;
   position?: number;

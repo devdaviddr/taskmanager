@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import type { DropResult } from '@hello-pangea/dnd'
+import { Cog6ToothIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import PageLayout from '../components/PageLayout'
 import PageHeader from '../components/PageHeader'
 import { boardsAPI, itemsAPI, columnsAPI } from '../services/api'
@@ -12,6 +13,7 @@ interface Board {
   name: string
   description?: string
   background?: string
+  column_theme?: string
   user_id: number
   created_at: string
   updated_at: string
@@ -49,6 +51,7 @@ export default function BoardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   const { data: board, isLoading, error } = useQuery({
     queryKey: ['board', boardId],
@@ -143,6 +146,52 @@ export default function BoardPage() {
     },
   })
 
+  const updateBoardMutation = useMutation({
+    mutationFn: ({ id, background, column_theme }: { id: number; background?: string; column_theme?: string }) =>
+      boardsAPI.update(id, { background, column_theme }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
+      setIsSettingsOpen(false)
+    },
+    onError: (error) => {
+      console.error('Failed to update board:', error)
+    },
+  })
+
+  const updateColumnMutation = useMutation({
+    mutationFn: ({ id, name }: { id: number; name: string }) =>
+      columnsAPI.update(id, { name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
+    },
+    onError: (error) => {
+      console.error('Failed to update column:', error)
+    },
+  })
+
+  const deleteColumnMutation = useMutation({
+    mutationFn: (id: number) => columnsAPI.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
+    },
+    onError: (error) => {
+      console.error('Failed to delete column:', error)
+    },
+  })
+
+  const moveColumnMutation = useMutation({
+    mutationFn: ({ id, position }: { id: number; position: number }) =>
+      columnsAPI.move(id, position),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
+    },
+    onError: (error) => {
+      console.error('Failed to move column:', error)
+      // Revert the optimistic update if needed
+      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
+    },
+  })
+
   const handleDeleteCard = () => {
     if (selectedCard && window.confirm('Are you sure you want to delete this card? This action cannot be undone.')) {
       deleteItemMutation.mutate(selectedCard.id)
@@ -157,6 +206,14 @@ export default function BoardPage() {
         archiveItemMutation.mutate({ id: selectedCard.id, archived: shouldArchive })
       }
     }
+  }
+
+  const handleChangeBackground = (background: string | undefined) => {
+    updateBoardMutation.mutate({ id: boardId, background })
+  }
+
+  const handleChangeColumnTheme = (column_theme: string) => {
+    updateBoardMutation.mutate({ id: boardId, column_theme })
   }
 
   const handleCloseModal = () => {
@@ -180,6 +237,19 @@ export default function BoardPage() {
     }
   }
 
+  const handleEditColumn = (columnId: number, currentName: string) => {
+    const name = prompt('Edit column name:', currentName)
+    if (name && name.trim() && name.trim() !== currentName) {
+      updateColumnMutation.mutate({ id: columnId, name: name.trim() })
+    }
+  }
+
+  const handleDeleteColumn = (columnId: number) => {
+    if (window.confirm('Are you sure you want to delete this column and all its cards? This action cannot be undone.')) {
+      deleteColumnMutation.mutate(columnId)
+    }
+  }
+
   const handleDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result
 
@@ -188,16 +258,25 @@ export default function BoardPage() {
       return
     }
 
-    // Item drag
-    const itemId = parseInt(draggableId)
-    const destColumnId = parseInt(destination.droppableId)
+    if (draggableId.startsWith('column-')) {
+      // Column drag
+      const columnId = parseInt(draggableId.replace('column-', ''))
+      moveColumnMutation.mutate({
+        id: columnId,
+        position: destination.index,
+      })
+    } else {
+      // Item drag
+      const itemId = parseInt(draggableId)
+      const destColumnId = parseInt(destination.droppableId)
 
-    // Optimistically update the UI immediately
-    moveItemMutation.mutate({
-      itemId,
-      columnId: destColumnId,
-      position: destination.index,
-    })
+      // Optimistically update the UI immediately
+      moveItemMutation.mutate({
+        itemId,
+        columnId: destColumnId,
+        position: destination.index,
+      })
+    }
   }
 
   if (isLoading) {
@@ -222,98 +301,196 @@ export default function BoardPage() {
     )
   }
 
+  const columnTheme = board?.column_theme || 'dark'
+  const columnClasses = columnTheme === 'dark' ? 'bg-black/60' : 'bg-white'
+  const cardClasses = columnTheme === 'dark' ? 'bg-black/70' : 'bg-white'
+  const textClasses = columnTheme === 'dark' ? 'text-white' : 'text-black'
+  const inputClasses = columnTheme === 'dark' 
+    ? 'bg-black/40 border-white/30 text-white placeholder-white/50 focus:bg-black/60 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/50 hover:bg-black/50 hover:border-white/40' 
+    : 'bg-gray-50 border-gray-300 text-black placeholder-gray-500 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-500/50 hover:bg-gray-100 hover:border-gray-400'
+  const isDarkBackground = board.background && ['bg-blue-600', 'bg-green-600', 'bg-purple-600', 'bg-red-600'].includes(board.background);
+
   return (
-    <PageLayout background={board.background || 'bg-white'}>
-      <div className="mb-6">
-        <PageHeader title={board.name} />
-      </div>
-
-      <div className="overflow-x-auto overflow-y-hidden">
-        <div className="flex pb-6 min-w-max">
-          <button
-            onClick={() => handleAddColumn(0)}
-            className="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-white/80 transition-colors flex-shrink-0 mr-6"
-          >
-            +
-          </button>
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <div className="flex space-x-6">
-              {board.columns
-                .sort((a, b) => a.position - b.position)
-                .map((column) => (
-                  <div key={column.id} className="flex items-start">
-                    <Droppable droppableId={column.id.toString()}>
-                      {(droppableProvided, snapshot) => (
-                        <div
-                          ref={droppableProvided.innerRef}
-                          {...droppableProvided.droppableProps}
-                          className={`rounded-lg p-2 w-80 transition-all duration-200 border border-gray-200 ${
-                            snapshot.isDraggingOver ? 'bg-blue-50 border-blue-400' : 'bg-black/60'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center">
-                              <h3 className="font-semibold text-white">{column.name}</h3>
-                            </div>
-                            <span className="text-sm text-white/80">{column.items.length}</span>
-                          </div>
-
-                          <div className="space-y-1">
-                            {column.items
-                              .sort((a, b) => a.position - b.position)
-                              .map((item, itemIndex) => (
-                                <Draggable key={item.id} draggableId={item.id.toString()} index={itemIndex}>
-                                  {(itemProvided, itemSnapshot) => (
-                                    <div
-                                      ref={itemProvided.innerRef}
-                                      {...itemProvided.draggableProps}
-                                      {...itemProvided.dragHandleProps}
-                                      className={`bg-black/70 p-2 rounded shadow-sm border cursor-move hover:shadow-md transition-all duration-200 ${
-                                        itemSnapshot.isDragging ? 'rotate-2 shadow-xl scale-105 bg-blue-50 border-blue-300' : ''
-                                      }`}
-                                      onClick={() => handleCardClick(item)}
-                                    >
-                                      <h4 className="font-medium text-white mb-1">{item.title}</h4>
-                                      {item.description && (
-                                        <p className="text-sm text-white/80">{item.description}</p>
-                                      )}
-                                      <div className="text-xs text-white/60 mt-1">
-                                        {new Date(item.created_at).toLocaleDateString()}
-                                      </div>
-                                    </div>
-                                  )}
-                                </Draggable>
-                              ))}
-                            {droppableProvided.placeholder}
-                          </div>
-
-                          <div className="mt-2">
-                            <input
-                              type="text"
-                              placeholder="Add a card..."
-                              value={newItemTitles[column.id] || ''}
-                              onChange={(e) => setNewItemTitles(prev => ({ ...prev, [column.id]: e.target.value }))}
-                              onKeyPress={(e) => handleItemSubmit(column.id, e)}
-                              className="w-full px-2 py-1 bg-black/50 border border-white/20 rounded text-sm text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </Droppable>
+    <PageLayout background={board.background || 'bg-gray-50'}>
+      <div className="w-full h-full flex flex-col">
+        <div className="px-6 py-4">
+          <PageHeader title={board.name} background={board.background}>
+            <div className="relative">
+              <button
+                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                className="p-2 rounded-md hover:bg-white/10 transition-colors"
+              >
+                <Cog6ToothIcon className={`w-5 h-5 ${isDarkBackground ? 'text-white' : 'text-black'}`} />
+              </button>
+              {isSettingsOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border">
+                  <div className="py-1">
+                    <div className="px-4 py-2 text-sm font-medium text-gray-700 border-b">Background Color</div>
+                    <button
+                      onClick={() => handleChangeBackground('bg-white')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Default (White)
+                    </button>
+                    <button
+                      onClick={() => handleChangeBackground('bg-blue-600')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Blue
+                    </button>
+                    <button
+                      onClick={() => handleChangeBackground('bg-green-600')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Green
+                    </button>
+                    <button
+                      onClick={() => handleChangeBackground('bg-purple-600')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Purple
+                    </button>
+                    <button
+                      onClick={() => handleChangeBackground('bg-red-600')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Red
+                    </button>
+                    <div className="px-4 py-2 text-sm font-medium text-gray-700 border-b border-t">Column Theme</div>
+                    <button
+                      onClick={() => handleChangeColumnTheme('dark')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Dark
+                    </button>
+                    <button
+                      onClick={() => handleChangeColumnTheme('light')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Light
+                    </button>
                   </div>
-                ))}
-             </div>
-           </DragDropContext>
-           <div className="flex items-start ml-6">
-             <button
-               onClick={() => handleAddColumn(board.columns.length)}
-               className="w-80 h-16 border-2 border-dashed border-white/40 rounded-lg flex items-center justify-center text-white/60 hover:text-white hover:border-white/60 transition-colors bg-transparent"
-             >
-               + Add Column
-             </button>
-           </div>
-         </div>
-       </div>
+                </div>
+              )}
+            </div>
+          </PageHeader>
+        </div>
+
+        <div className="flex-1 px-6 pb-6 overflow-x-auto overflow-y-hidden">
+          <div className="flex pb-6 min-w-max">
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="columns" direction="horizontal">
+                {(columnsProvided) => (
+                  <div
+                    ref={columnsProvided.innerRef}
+                    {...columnsProvided.droppableProps}
+                    className="flex space-x-6"
+                  >
+                    {board.columns
+                      .sort((a, b) => a.position - b.position)
+                      .map((column, index) => (
+                        <Draggable key={column.id} draggableId={`column-${column.id}`} index={index}>
+                          {(columnProvided) => (
+                            <div
+                              ref={columnProvided.innerRef}
+                              {...columnProvided.draggableProps}
+                              {...columnProvided.dragHandleProps}
+                              className="flex items-start"
+                            >
+                              <Droppable droppableId={column.id.toString()}>
+                                {(droppableProvided, snapshot) => (
+                                   <div
+                                     ref={droppableProvided.innerRef}
+                                     {...droppableProvided.droppableProps}
+                                     className={`rounded-lg p-2 w-80 transition-all duration-200 border border-gray-200 ${
+                                       snapshot.isDraggingOver ? 'bg-blue-50 border-blue-400' : columnClasses
+                                     }`}
+                                   >
+                                     <div className="flex items-center justify-between mb-2">
+                                       <div className="flex items-center">
+                                         <h3 className={`font-semibold ${textClasses}`}>{column.name}</h3>
+                                       </div>
+                                       <div className="flex items-center space-x-1">
+                                         <button
+                                           onClick={() => handleEditColumn(column.id, column.name)}
+                                           disabled={updateColumnMutation.isPending}
+                                           className={`p-1 rounded hover:bg-white/10 transition-colors ${textClasses}/60 hover:${textClasses}`}
+                                         >
+                                           <PencilIcon className="w-4 h-4" />
+                                         </button>
+                                         <button
+                                           onClick={() => handleDeleteColumn(column.id)}
+                                           disabled={deleteColumnMutation.isPending}
+                                           className={`p-1 rounded hover:bg-red-500/20 transition-colors text-red-400 hover:text-red-300`}
+                                         >
+                                           <TrashIcon className="w-4 h-4" />
+                                         </button>
+                                         <span className={`text-sm ${textClasses}/80`}>{column.items.length}</span>
+                                       </div>
+                                     </div>
+
+                                    <div className="space-y-1">
+                                      {column.items
+                                        .sort((a, b) => a.position - b.position)
+                                        .map((item, itemIndex) => (
+                                          <Draggable key={item.id} draggableId={item.id.toString()} index={itemIndex}>
+                                            {(itemProvided, itemSnapshot) => (
+                                               <div
+                                                 ref={itemProvided.innerRef}
+                                                 {...itemProvided.draggableProps}
+                                                 {...itemProvided.dragHandleProps}
+                                                 className={`bg-black/70 p-2 rounded shadow-sm border cursor-move hover:shadow-md transition-all duration-200 ${
+                                                   itemSnapshot.isDragging ? 'rotate-2 shadow-xl scale-105 bg-blue-50 border-blue-300' : cardClasses
+                                                 }`}
+                                                 onClick={() => handleCardClick(item)}
+                                               >
+                                                 <h4 className={`font-medium ${textClasses} mb-1`}>{item.title}</h4>
+                                                 {item.description && (
+                                                   <p className={`text-sm ${textClasses}/80`}>{item.description}</p>
+                                                 )}
+                                                 <div className={`text-xs ${textClasses}/60 mt-1`}>
+                                                   {new Date(item.created_at).toLocaleDateString()}
+                                                 </div>
+                                               </div>
+                                            )}
+                                          </Draggable>
+                                        ))}
+                                      {droppableProvided.placeholder}
+                                    </div>
+
+                                     <div className="mt-2">
+                                        <input
+                                          type="text"
+                                          placeholder="Add a card..."
+                                          value={newItemTitles[column.id] || ''}
+                                          onChange={(e) => setNewItemTitles(prev => ({ ...prev, [column.id]: e.target.value }))}
+                                          onKeyPress={(e) => handleItemSubmit(column.id, e)}
+                                          className={`w-full px-3 py-2 border rounded-lg text-sm shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${inputClasses}`}
+                                        />
+                                     </div>
+                                  </div>
+                                )}
+                              </Droppable>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                    {columnsProvided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+            <div className="flex items-start ml-6">
+              <button
+                onClick={() => handleAddColumn(board.columns.length)}
+                className={`w-80 h-16 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors bg-transparent ${isDarkBackground ? 'border-white/40 text-white/60 hover:text-white hover:border-white/60' : 'border-black/40 text-black/60 hover:text-black hover:border-black/60'}`}
+              >
+                + Add Column
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Card Edit Modal */}
       {isModalOpen && selectedCard && (

@@ -4,7 +4,7 @@ import type { Board, CreateBoardRequest, BoardWithColumns } from '../types';
 export class BoardModel {
   static async findAll(userId: number = 1): Promise<Board[]> {
     const result = await pool.query(`
-      SELECT id, name, description, background, user_id, created_at, updated_at
+      SELECT id, name, description, background, column_theme, user_id, created_at, updated_at
       FROM boards
       WHERE user_id = $1
       ORDER BY created_at DESC
@@ -14,7 +14,7 @@ export class BoardModel {
 
   static async findById(id: number): Promise<Board | null> {
     const result = await pool.query(`
-      SELECT id, name, description, background, user_id, created_at, updated_at
+      SELECT id, name, description, background, column_theme, user_id, created_at, updated_at
       FROM boards
       WHERE id = $1
     `, [id]);
@@ -23,7 +23,7 @@ export class BoardModel {
 
   static async findByIdWithColumns(id: number): Promise<BoardWithColumns | null> {
     const boardResult = await pool.query(`
-      SELECT id, name, description, background, user_id, created_at, updated_at
+      SELECT id, name, description, background, column_theme, user_id, created_at, updated_at
       FROM boards
       WHERE id = $1
     `, [id]);
@@ -63,10 +63,10 @@ export class BoardModel {
 
   static async create(boardData: CreateBoardRequest): Promise<Board> {
     const result = await pool.query(`
-      INSERT INTO boards (name, description, background, user_id, created_at, updated_at)
-      VALUES ($1, $2, $3, 1, NOW(), NOW())
-      RETURNING id, name, description, background, user_id, created_at, updated_at
-    `, [boardData.name, boardData.description || null, boardData.background || 'bg-white']);
+      INSERT INTO boards (name, description, background, column_theme, user_id, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, 1, NOW(), NOW())
+      RETURNING id, name, description, background, column_theme, user_id, created_at, updated_at
+    `, [boardData.name, boardData.description || null, boardData.background || 'bg-gray-50', boardData.column_theme || 'dark']);
     return result.rows[0];
   }
 
@@ -87,9 +87,15 @@ export class BoardModel {
       paramCount++;
     }
 
-    if (boardData.background !== undefined) {
+    if ('background' in boardData) {
       fields.push(`background = $${paramCount}`);
       values.push(boardData.background);
+      paramCount++;
+    }
+
+    if ('column_theme' in boardData) {
+      fields.push(`column_theme = $${paramCount}`);
+      values.push(boardData.column_theme);
       paramCount++;
     }
 
@@ -104,7 +110,7 @@ export class BoardModel {
       UPDATE boards
       SET ${fields.join(', ')}
       WHERE id = $${paramCount}
-      RETURNING id, name, description, background, user_id, created_at, updated_at
+      RETURNING id, name, description, background, column_theme, user_id, created_at, updated_at
     `, values);
 
     return result.rows[0] || null;
