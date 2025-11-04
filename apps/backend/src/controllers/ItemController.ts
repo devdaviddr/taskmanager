@@ -3,6 +3,24 @@ import { ItemService } from '../services/ItemService';
 import type { CreateItemRequest, MoveItemRequest } from '../types';
 
 export class ItemController {
+  static async get(c: Context) {
+    try {
+      const id = parseInt(c.req.param('id'));
+      if (isNaN(id)) {
+        return c.json({ error: 'Invalid item ID' }, 400);
+      }
+
+      const item = await ItemService.getItemById(id);
+      return c.json(item);
+    } catch (error) {
+      console.error('Controller error - get item:', error);
+      if (error instanceof Error && error.message === 'Item not found') {
+        return c.json({ error: error.message }, 404);
+      }
+      return c.json({ error: 'Internal server error' }, 500);
+    }
+  }
+
   static async getByColumn(c: Context) {
     try {
       const columnId = parseInt(c.req.param('columnId'));
@@ -27,7 +45,14 @@ export class ItemController {
 
       const body: CreateItemRequest = await c.req.json();
 
-      const item = await ItemService.createItem(columnId, body);
+      // Parse dates from strings
+      const itemData: CreateItemRequest = {
+        ...body,
+        start_date: body.start_date ? new Date(body.start_date) : undefined,
+        end_date: body.end_date ? new Date(body.end_date) : undefined,
+      };
+
+      const item = await ItemService.createItem(columnId, itemData);
       return c.json(item, 201);
     } catch (error) {
       console.error('Controller error - create item:', error);
@@ -46,7 +71,15 @@ export class ItemController {
       }
 
       const body: Partial<CreateItemRequest> = await c.req.json();
-      const item = await ItemService.updateItem(id, body);
+
+      // Parse dates from strings
+      const itemData: Partial<CreateItemRequest> = {
+        ...body,
+        start_date: body.start_date ? new Date(body.start_date) : undefined,
+        end_date: body.end_date ? new Date(body.end_date) : undefined,
+      };
+
+      const item = await ItemService.updateItem(id, itemData);
 
       return c.json(item);
     } catch (error) {

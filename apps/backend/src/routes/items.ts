@@ -3,6 +3,7 @@ import { ItemController } from '../controllers/ItemController';
 
 const itemRoutes = new Hono();
 
+itemRoutes.get('/items/:id', ItemController.get);
 itemRoutes.get('/columns/:columnId/items', ItemController.getByColumn);
 itemRoutes.post('/columns/:columnId/items', ItemController.create);
 itemRoutes.put('/items/:id', ItemController.update);

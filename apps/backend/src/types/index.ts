@@ -58,6 +58,11 @@ export interface Item {
   title: string;
   description?: string;
   position: number;
+  start_date?: Date;
+  end_date?: Date;
+  effort?: number;
+  label?: string;
+  archived: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -72,6 +77,10 @@ export interface CreateItemRequest {
   title: string;
   description?: string;
   position?: number;
+  start_date?: Date;
+  end_date?: Date;
+  effort?: number;
+  label?: string;
 }
 
 export interface MoveItemRequest {

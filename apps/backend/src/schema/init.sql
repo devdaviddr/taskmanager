@@ -66,5 +66,11 @@ ALTER TABLE boards ADD COLUMN IF NOT EXISTS background VARCHAR(255) DEFAULT 'bg-
 -- Add column_theme column to boards table if it doesn't exist (for migrations)
 ALTER TABLE boards ADD COLUMN IF NOT EXISTS column_theme VARCHAR(255) DEFAULT 'dark';
 
+-- Add new fields to items table for enhanced task management
+ALTER TABLE items ADD COLUMN IF NOT EXISTS start_date TIMESTAMP WITH TIME ZONE;
+ALTER TABLE items ADD COLUMN IF NOT EXISTS end_date TIMESTAMP WITH TIME ZONE;
+ALTER TABLE items ADD COLUMN IF NOT EXISTS effort INTEGER CHECK (effort >= 0 AND effort <= 10);
+ALTER TABLE items ADD COLUMN IF NOT EXISTS label TEXT;
+
 -- Set default background for existing boards
 UPDATE boards SET background = 'bg-gray-50' WHERE background IS NULL;

@@ -128,6 +128,26 @@ export class ItemService {
     if (data.position !== undefined && (typeof data.position !== 'number' || data.position < 0)) {
       throw new Error('Validation error: Position must be a non-negative number');
     }
+
+    if (data.start_date !== undefined && !(data.start_date instanceof Date)) {
+      throw new Error('Validation error: Start date must be a valid date');
+    }
+
+    if (data.end_date !== undefined && !(data.end_date instanceof Date)) {
+      throw new Error('Validation error: End date must be a valid date');
+    }
+
+    if (data.start_date && data.end_date && data.start_date > data.end_date) {
+      throw new Error('Validation error: Start date cannot be after end date');
+    }
+
+    if (data.effort !== undefined && (typeof data.effort !== 'number' || data.effort < 0 || data.effort > 10)) {
+      throw new Error('Validation error: Effort must be a number between 0 and 10');
+    }
+
+    if (data.label !== undefined && typeof data.label !== 'string') {
+      throw new Error('Validation error: Label must be a string');
+    }
   }
 
   private static validateUpdateItemData(data: Partial<CreateItemRequest>): void {
@@ -151,6 +171,26 @@ export class ItemService {
 
     if (data.position !== undefined && (typeof data.position !== 'number' || data.position < 0)) {
       throw new Error('Validation error: Position must be a non-negative number');
+    }
+
+    if (data.start_date !== undefined && !(data.start_date instanceof Date)) {
+      throw new Error('Validation error: Start date must be a valid date');
+    }
+
+    if (data.end_date !== undefined && !(data.end_date instanceof Date)) {
+      throw new Error('Validation error: End date must be a valid date');
+    }
+
+    if (data.start_date && data.end_date && data.start_date > data.end_date) {
+      throw new Error('Validation error: Start date cannot be after end date');
+    }
+
+    if (data.effort !== undefined && (typeof data.effort !== 'number' || data.effort < 0 || data.effort > 10)) {
+      throw new Error('Validation error: Effort must be a number between 0 and 10');
+    }
+
+    if (data.label !== undefined && typeof data.label !== 'string') {
+      throw new Error('Validation error: Label must be a string');
     }
   }
 }

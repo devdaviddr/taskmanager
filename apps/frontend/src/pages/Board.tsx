@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import type { DropResult } from '@hello-pangea/dnd'
-import { Cog6ToothIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { PencilIcon, TrashIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import PageLayout from '../components/PageLayout'
 import PageHeader from '../components/PageHeader'
 import { boardsAPI, itemsAPI, columnsAPI } from '../services/api'
@@ -36,6 +36,10 @@ interface Item {
   title: string
   description?: string
   position: number
+  start_date?: string
+  end_date?: string
+  effort?: number
+  label?: string
   archived: boolean
   created_at: string
   updated_at: string
@@ -51,7 +55,10 @@ export default function BoardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [editStartDate, setEditStartDate] = useState('')
+  const [editEndDate, setEditEndDate] = useState('')
+  const [editEffort, setEditEffort] = useState('')
+  const [editLabel, setEditLabel] = useState('')
 
   const { data: board, isLoading, error } = useQuery({
     queryKey: ['board', boardId],
@@ -71,23 +78,6 @@ export default function BoardPage() {
     },
   })
 
-  const createColumnMutation = useMutation({
-    mutationFn: ({ boardId, name, position }: { boardId: number; name: string; position: number }) =>
-      columnsAPI.create(boardId, { name, position }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
-    },
-  })
-
-  const updateItemMutation = useMutation({
-    mutationFn: ({ id, title, description }: { id: number; title: string; description: string }) =>
-      itemsAPI.update(id, { title, description }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
-      handleCloseModal()
-    },
-  })
-
   const moveItemMutation = useMutation({
     mutationFn: ({ itemId, columnId, position }: { itemId: number; columnId: number; position: number }) =>
       itemsAPI.move(itemId, { column_id: columnId, position }),
@@ -96,33 +86,18 @@ export default function BoardPage() {
     },
     onError: (error) => {
       console.error('Failed to move item:', error)
-      // Revert the optimistic update if needed
       queryClient.invalidateQueries({ queryKey: ['board', boardId] })
     },
   })
 
-  const handleCreateItem = (columnId: number, title: string) => {
-    if (title.trim()) {
-      createItemMutation.mutate({ columnId, title: title.trim() })
-    }
-  }
-
-  const handleCardClick = (item: Item) => {
-    setSelectedCard(item)
-    setEditTitle(item.title)
-    setEditDescription(item.description || '')
-    setIsModalOpen(true)
-  }
-
-  const handleSaveCard = () => {
-    if (selectedCard) {
-      updateItemMutation.mutate({
-        id: selectedCard.id,
-        title: editTitle,
-        description: editDescription,
-      })
-    }
-  }
+  const updateItemMutation = useMutation({
+    mutationFn: ({ id, title, description, start_date, end_date, effort, label }: { id: number; title: string; description: string; start_date?: string; end_date?: string; effort?: number; label?: string }) =>
+      itemsAPI.update(id, { title, description, start_date, end_date, effort, label }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
+      handleCloseModal()
+    },
+  })
 
   const deleteItemMutation = useMutation({
     mutationFn: (id: number) => itemsAPI.delete(id),
@@ -143,18 +118,6 @@ export default function BoardPage() {
     },
     onError: (error) => {
       console.error('Failed to archive item:', error)
-    },
-  })
-
-  const updateBoardMutation = useMutation({
-    mutationFn: ({ id, background, column_theme }: { id: number; background?: string; column_theme?: string }) =>
-      boardsAPI.update(id, { background, column_theme }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
-      setIsSettingsOpen(false)
-    },
-    onError: (error) => {
-      console.error('Failed to update board:', error)
     },
   })
 
@@ -187,10 +150,84 @@ export default function BoardPage() {
     },
     onError: (error) => {
       console.error('Failed to move column:', error)
-      // Revert the optimistic update if needed
       queryClient.invalidateQueries({ queryKey: ['board', boardId] })
     },
   })
+
+  const handleCreateItem = (columnId: number, title: string) => {
+    if (title.trim()) {
+      createItemMutation.mutate({ columnId, title: title.trim() })
+    }
+  }
+
+  const handleItemSubmit = (columnId: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const title = newItemTitles[columnId] || ''
+      handleCreateItem(columnId, title)
+    }
+  }
+
+  const handleDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId } = result
+    
+    if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) {
+      return
+    }
+
+    const itemId = parseInt(draggableId)
+    const destColumnId = parseInt(destination.droppableId)
+
+    moveItemMutation.mutate({
+      itemId,
+      columnId: destColumnId,
+      position: destination.index,
+    })
+  }
+
+  const handleCardClick = (item: Item) => {
+    setSelectedCard(item)
+    setEditTitle(item.title)
+    setEditDescription(item.description || '')
+    setEditStartDate(item.start_date ? new Date(item.start_date).toISOString().split('T')[0] : '')
+    setEditEndDate(item.end_date ? new Date(item.end_date).toISOString().split('T')[0] : '')
+    setEditEffort(item.effort?.toString() || '')
+    setEditLabel(item.label || '')
+    setIsModalOpen(true)
+  }
+
+  const handleSaveCard = () => {
+    if (selectedCard) {
+      // Validate dates
+      if (editStartDate && isNaN(new Date(editStartDate).getTime())) {
+        alert('Invalid start date')
+        return
+      }
+      if (editEndDate && isNaN(new Date(editEndDate).getTime())) {
+        alert('Invalid end date')
+        return
+      }
+      
+      let effort: number | undefined
+      if (editEffort) {
+        const parsed = parseInt(editEffort)
+        if (isNaN(parsed)) {
+          alert('Effort must be a number')
+          return
+        }
+        effort = parsed
+      }
+
+      updateItemMutation.mutate({
+        id: selectedCard.id,
+        title: editTitle,
+        description: editDescription,
+        start_date: editStartDate || undefined,
+        end_date: editEndDate || undefined,
+        effort: effort,
+        label: editLabel || undefined,
+      })
+    }
+  }
 
   const handleDeleteCard = () => {
     if (selectedCard && window.confirm('Are you sure you want to delete this card? This action cannot be undone.')) {
@@ -208,35 +245,6 @@ export default function BoardPage() {
     }
   }
 
-  const handleChangeBackground = (background: string | undefined) => {
-    updateBoardMutation.mutate({ id: boardId, background })
-  }
-
-  const handleChangeColumnTheme = (column_theme: string) => {
-    updateBoardMutation.mutate({ id: boardId, column_theme })
-  }
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false)
-    setSelectedCard(null)
-    setEditTitle('')
-    setEditDescription('')
-  }
-
-  const handleItemSubmit = (columnId: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      const title = newItemTitles[columnId] || ''
-      handleCreateItem(columnId, title)
-    }
-  }
-
-  const handleAddColumn = (position: number) => {
-    const name = prompt('Enter column name:', 'New Column')
-    if (name && name.trim()) {
-      createColumnMutation.mutate({ boardId, name: name.trim(), position })
-    }
-  }
-
   const handleEditColumn = (columnId: number, currentName: string) => {
     const name = prompt('Edit column name:', currentName)
     if (name && name.trim() && name.trim() !== currentName) {
@@ -250,33 +258,23 @@ export default function BoardPage() {
     }
   }
 
-  const handleDragEnd = (result: DropResult) => {
-    const { destination, source, draggableId } = result
-
-    // If no destination or dropped in same position, do nothing
-    if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) {
-      return
+  const handleMoveColumnLeft = (column: Column) => {
+    if (column.position > 0) {
+      moveColumnMutation.mutate({ id: column.id, position: column.position - 1 })
     }
+  }
 
-    if (draggableId.startsWith('column-')) {
-      // Column drag
-      const columnId = parseInt(draggableId.replace('column-', ''))
-      moveColumnMutation.mutate({
-        id: columnId,
-        position: destination.index,
-      })
-    } else {
-      // Item drag
-      const itemId = parseInt(draggableId)
-      const destColumnId = parseInt(destination.droppableId)
-
-      // Optimistically update the UI immediately
-      moveItemMutation.mutate({
-        itemId,
-        columnId: destColumnId,
-        position: destination.index,
-      })
+  const handleMoveColumnRight = (column: Column) => {
+    if (column.position < board!.columns.length - 1) {
+      moveColumnMutation.mutate({ id: column.id, position: column.position + 1 })
     }
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedCard(null)
+    setEditTitle('')
+    setEditDescription('')
   }
 
   if (isLoading) {
@@ -308,186 +306,140 @@ export default function BoardPage() {
   const inputClasses = columnTheme === 'dark' 
     ? 'bg-black/40 border-white/30 text-white placeholder-white/50 focus:bg-black/60 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/50 hover:bg-black/50 hover:border-white/40' 
     : 'bg-gray-50 border-gray-300 text-black placeholder-gray-500 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-500/50 hover:bg-gray-100 hover:border-gray-400'
-  const isDarkBackground = board.background && ['bg-blue-600', 'bg-green-600', 'bg-purple-600', 'bg-red-600'].includes(board.background);
 
   return (
     <PageLayout background={board.background || 'bg-gray-50'}>
       <div className="w-full h-full flex flex-col">
         <div className="px-6 py-4">
-          <PageHeader title={board.name} background={board.background}>
-            <div className="relative">
-              <button
-                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                className="p-2 rounded-md hover:bg-white/10 transition-colors"
-              >
-                <Cog6ToothIcon className={`w-5 h-5 ${isDarkBackground ? 'text-white' : 'text-black'}`} />
-              </button>
-              {isSettingsOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border">
-                  <div className="py-1">
-                    <div className="px-4 py-2 text-sm font-medium text-gray-700 border-b">Background Color</div>
-                    <button
-                      onClick={() => handleChangeBackground('bg-white')}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Default (White)
-                    </button>
-                    <button
-                      onClick={() => handleChangeBackground('bg-blue-600')}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Blue
-                    </button>
-                    <button
-                      onClick={() => handleChangeBackground('bg-green-600')}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Green
-                    </button>
-                    <button
-                      onClick={() => handleChangeBackground('bg-purple-600')}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Purple
-                    </button>
-                    <button
-                      onClick={() => handleChangeBackground('bg-red-600')}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Red
-                    </button>
-                    <div className="px-4 py-2 text-sm font-medium text-gray-700 border-b border-t">Column Theme</div>
-                    <button
-                      onClick={() => handleChangeColumnTheme('dark')}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Dark
-                    </button>
-                    <button
-                      onClick={() => handleChangeColumnTheme('light')}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Light
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </PageHeader>
+          <PageHeader title={board.name} background={board.background} />
         </div>
 
         <div className="flex-1 px-6 pb-6 overflow-x-auto overflow-y-hidden">
           <div className="flex pb-6 min-w-max">
             <DragDropContext onDragEnd={handleDragEnd}>
-              <Droppable droppableId="columns" direction="horizontal">
-                {(columnsProvided) => (
-                  <div
-                    ref={columnsProvided.innerRef}
-                    {...columnsProvided.droppableProps}
-                    className="flex space-x-6"
-                  >
-                    {board.columns
-                      .sort((a, b) => a.position - b.position)
-                      .map((column, index) => (
-                        <Draggable key={column.id} draggableId={`column-${column.id}`} index={index}>
-                          {(columnProvided) => (
-                            <div
-                              ref={columnProvided.innerRef}
-                              {...columnProvided.draggableProps}
-                              {...columnProvided.dragHandleProps}
-                              className="flex items-start"
-                            >
-                              <Droppable droppableId={column.id.toString()}>
-                                {(droppableProvided, snapshot) => (
-                                   <div
-                                     ref={droppableProvided.innerRef}
-                                     {...droppableProvided.droppableProps}
-                                     className={`rounded-lg p-2 w-80 transition-all duration-200 border border-gray-200 ${
-                                       snapshot.isDraggingOver ? 'bg-blue-50 border-blue-400' : columnClasses
-                                     }`}
-                                   >
-                                     <div className="flex items-center justify-between mb-2">
-                                       <div className="flex items-center">
-                                         <h3 className={`font-semibold ${textClasses}`}>{column.name}</h3>
-                                       </div>
-                                       <div className="flex items-center space-x-1">
-                                         <button
-                                           onClick={() => handleEditColumn(column.id, column.name)}
-                                           disabled={updateColumnMutation.isPending}
-                                           className={`p-1 rounded hover:bg-white/10 transition-colors ${textClasses}/60 hover:${textClasses}`}
-                                         >
-                                           <PencilIcon className="w-4 h-4" />
-                                         </button>
-                                         <button
-                                           onClick={() => handleDeleteColumn(column.id)}
-                                           disabled={deleteColumnMutation.isPending}
-                                           className={`p-1 rounded hover:bg-red-500/20 transition-colors text-red-400 hover:text-red-300`}
-                                         >
-                                           <TrashIcon className="w-4 h-4" />
-                                         </button>
-                                         <span className={`text-sm ${textClasses}/80`}>{column.items.length}</span>
-                                       </div>
-                                     </div>
-
-                                    <div className="space-y-1">
-                                      {column.items
-                                        .sort((a, b) => a.position - b.position)
-                                        .map((item, itemIndex) => (
-                                          <Draggable key={item.id} draggableId={item.id.toString()} index={itemIndex}>
-                                            {(itemProvided, itemSnapshot) => (
-                                               <div
-                                                 ref={itemProvided.innerRef}
-                                                 {...itemProvided.draggableProps}
-                                                 {...itemProvided.dragHandleProps}
-                                                 className={`bg-black/70 p-2 rounded shadow-sm border cursor-move hover:shadow-md transition-all duration-200 ${
-                                                   itemSnapshot.isDragging ? 'rotate-2 shadow-xl scale-105 bg-blue-50 border-blue-300' : cardClasses
-                                                 }`}
-                                                 onClick={() => handleCardClick(item)}
-                                               >
-                                                 <h4 className={`font-medium ${textClasses} mb-1`}>{item.title}</h4>
-                                                 {item.description && (
-                                                   <p className={`text-sm ${textClasses}/80`}>{item.description}</p>
-                                                 )}
-                                                 <div className={`text-xs ${textClasses}/60 mt-1`}>
-                                                   {new Date(item.created_at).toLocaleDateString()}
-                                                 </div>
-                                               </div>
-                                            )}
-                                          </Draggable>
-                                        ))}
-                                      {droppableProvided.placeholder}
-                                    </div>
-
-                                     <div className="mt-2">
-                                        <input
-                                          type="text"
-                                          placeholder="Add a card..."
-                                          value={newItemTitles[column.id] || ''}
-                                          onChange={(e) => setNewItemTitles(prev => ({ ...prev, [column.id]: e.target.value }))}
-                                          onKeyPress={(e) => handleItemSubmit(column.id, e)}
-                                          className={`w-full px-3 py-2 border rounded-lg text-sm shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${inputClasses}`}
-                                        />
-                                     </div>
-                                  </div>
-                                )}
-                              </Droppable>
+              <div className="flex space-x-6">
+                {board.columns
+                  .sort((a, b) => a.position - b.position)
+                  .map((column) => (
+                    <div key={column.id} className="flex items-start">
+                      <Droppable droppableId={column.id.toString()}>
+                        {(droppableProvided, snapshot) => (
+                          <div
+                            ref={droppableProvided.innerRef}
+                            {...droppableProvided.droppableProps}
+                            className={`rounded-lg p-2 w-80 transition-all duration-200 border border-gray-200 ${
+                              snapshot.isDraggingOver ? 'bg-blue-50 border-blue-400' : columnClasses
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center">
+                                <h3 className={`font-semibold ${textClasses}`}>{column.name}</h3>
+                              </div>
+                               <div className="flex items-center space-x-1">
+                                 <button
+                                   onClick={() => handleMoveColumnLeft(column)}
+                                   disabled={moveColumnMutation.isPending || column.position === 0}
+                                   className={`p-1 rounded hover:bg-white/10 transition-colors ${textClasses}/60 hover:${textClasses} disabled:opacity-30 disabled:cursor-not-allowed`}
+                                 >
+                                   <ChevronLeftIcon className="w-4 h-4" />
+                                 </button>
+                                 <button
+                                   onClick={() => handleMoveColumnRight(column)}
+                                   disabled={moveColumnMutation.isPending || column.position === board!.columns.length - 1}
+                                   className={`p-1 rounded hover:bg-white/10 transition-colors ${textClasses}/60 hover:${textClasses} disabled:opacity-30 disabled:cursor-not-allowed`}
+                                 >
+                                   <ChevronRightIcon className="w-4 h-4" />
+                                 </button>
+                                 <button
+                                   onClick={() => handleEditColumn(column.id, column.name)}
+                                   disabled={updateColumnMutation.isPending}
+                                   className={`p-1 rounded hover:bg-white/10 transition-colors ${textClasses}/60 hover:${textClasses}`}
+                                 >
+                                   <PencilIcon className="w-4 h-4" />
+                                 </button>
+                                 <button
+                                   onClick={() => handleDeleteColumn(column.id)}
+                                   disabled={deleteColumnMutation.isPending}
+                                   className={`p-1 rounded hover:bg-red-500/20 transition-colors text-red-400 hover:text-red-300`}
+                                 >
+                                   <TrashIcon className="w-4 h-4" />
+                                 </button>
+                                 <span className={`text-sm ${textClasses}/80`}>{column.items.length}</span>
+                               </div>
                             </div>
-                          )}
-                        </Draggable>
-                      ))}
-                    {columnsProvided.placeholder}
-                  </div>
-                )}
-              </Droppable>
+
+                            <div className="space-y-1">
+                              {column.items
+                                .sort((a, b) => a.position - b.position)
+                                .map((item, itemIndex) => (
+                                  <Draggable key={item.id} draggableId={item.id.toString()} index={itemIndex}>
+                                    {(itemProvided, itemSnapshot) => (
+                                      <div
+                                        ref={itemProvided.innerRef}
+                                        {...itemProvided.draggableProps}
+                                        {...itemProvided.dragHandleProps}
+                                        className={`${cardClasses} p-2 rounded-lg border border-gray-200 shadow-sm cursor-move hover:shadow-md transition-all duration-150 ${
+                                          itemSnapshot.isDragging 
+                                            ? 'shadow-xl opacity-95 border-blue-400 ring-2 ring-blue-400/50' 
+                                            : 'hover:border-gray-300 hover:shadow-md'
+                                        }`}
+                                        onClick={() => handleCardClick(item)}
+                                      >
+                                        <div className="space-y-1.5">
+                                          <h4 className={`font-semibold text-xs leading-tight ${textClasses}`}>{item.title}</h4>
+
+                                          {item.description && (
+                                            <p className={`text-xs ${textClasses}/70 leading-relaxed line-clamp-1`}>{item.description}</p>
+                                          )}
+
+                                          <div className="flex flex-wrap gap-1">
+                                            {item.label && (
+                                              <span className="inline-block bg-blue-500/20 text-blue-600 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                {item.label}
+                                              </span>
+                                            )}
+                                            {item.effort !== undefined && (
+                                              <span className="inline-block bg-green-500/20 text-green-700 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                ⚡{item.effort}
+                                              </span>
+                                            )}
+                                          </div>
+
+                                          {(item.start_date || item.end_date) && (
+                                            <div className="flex items-center gap-2 pt-1 border-t border-gray-200/50">
+                                              {item.start_date && (
+                                                <span className={`${textClasses}/60 text-xs`}>start: {new Date(item.start_date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
+                                              )}
+                                              {item.end_date && (
+                                                <span className={`${textClasses}/60 text-xs`}>end: {new Date(item.end_date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                ))}
+                              {droppableProvided.placeholder}
+                            </div>
+
+                            <div className="mt-2">
+                              <input
+                                type="text"
+                                placeholder="Add a card..."
+                                value={newItemTitles[column.id] || ''}
+                                onChange={(e) => setNewItemTitles(prev => ({ ...prev, [column.id]: e.target.value }))}
+                                onKeyPress={(e) => handleItemSubmit(column.id, e)}
+                                className={`w-full px-3 py-2 border rounded-lg text-sm shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${inputClasses}`}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </Droppable>
+                    </div>
+                  ))}
+              </div>
             </DragDropContext>
-            <div className="flex items-start ml-6">
-              <button
-                onClick={() => handleAddColumn(board.columns.length)}
-                className={`w-80 h-16 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors bg-transparent ${isDarkBackground ? 'border-white/40 text-white/60 hover:text-white hover:border-white/60' : 'border-black/40 text-black/60 hover:text-black hover:border-black/60'}`}
-              >
-                + Add Column
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -529,6 +481,60 @@ export default function BoardPage() {
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={editStartDate}
+                    onChange={(e) => setEditStartDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={editEndDate}
+                    onChange={(e) => setEditEndDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Label
+                  </label>
+                  <input
+                    type="text"
+                    value={editLabel}
+                    onChange={(e) => setEditLabel(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., Bug, Feature"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Effort (1-10)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={editEffort}
+                    onChange={(e) => setEditEffort(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="1-10"
+                  />
+                </div>
               </div>
 
               <div className="text-xs text-gray-400">
