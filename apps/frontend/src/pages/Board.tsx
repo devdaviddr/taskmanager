@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { DragDropContext } from '@hello-pangea/dnd'
 import type { DropResult } from '@hello-pangea/dnd'
-import { CogIcon } from '@heroicons/react/24/outline'
+import { CogIcon, PlusIcon } from '@heroicons/react/24/outline'
 import PageLayout from '../components/PageLayout'
 import PageHeader from '../components/PageHeader'
 import { boardsAPI } from '../services/api'
@@ -11,6 +11,7 @@ import { useBoardMutations } from '../hooks/useBoardMutations'
 import Column from '../components/sections/Column'
 import CardEditModal from '../components/sections/CardEditModal'
 import BoardSettingsModal from '../components/sections/BoardSettingsModal'
+import AddColumnModal from '../components/sections/AddColumnModal'
 import IconButton from '../components/ui/IconButton'
 import { validateEffort, validateDate } from '../constants/board'
 
@@ -176,10 +177,10 @@ export default function BoardPage() {
   }
 
   const handleEditColumn = (columnId: number, currentName: string) => {
-    const name = prompt('Edit column name:', currentName)
-    if (name && name.trim() && name.trim() !== currentName) {
-      mutations.updateColumnMutation.mutate({ id: columnId, name: name.trim() })
-    }
+    boardState.setNewColumnName(currentName)
+    boardState.setIsEditingColumn(true)
+    boardState.setEditingColumnId(columnId)
+    boardState.setIsAddColumnModalOpen(true)
   }
 
   const handleDeleteColumn = (columnId: number) => {
@@ -207,6 +208,13 @@ export default function BoardPage() {
     boardState.setIsSettingsModalOpen(true)
   }
 
+  const handleOpenAddColumn = () => {
+    boardState.setNewColumnName('')
+    boardState.setIsEditingColumn(false)
+    boardState.setEditingColumnId(null)
+    boardState.setIsAddColumnModalOpen(true)
+  }
+
   const handleSaveSettings = () => {
     mutations.updateBoardMutation.mutate({
       id: board!.id,
@@ -215,6 +223,24 @@ export default function BoardPage() {
       column_theme: boardState.editColumnTheme,
     })
     boardState.handleCloseSettings()
+  }
+
+  const handleSaveColumn = () => {
+    if (boardState.newColumnName.trim()) {
+      if (boardState.isEditingColumn && boardState.editingColumnId) {
+        mutations.updateColumnMutation.mutate({ id: boardState.editingColumnId, name: boardState.newColumnName.trim() })
+      } else {
+        mutations.createColumnMutation.mutate({
+          boardId: boardId,
+          name: boardState.newColumnName.trim(),
+          position: board!.columns.length
+        })
+      }
+      boardState.setIsAddColumnModalOpen(false)
+      boardState.setNewColumnName('')
+      boardState.setIsEditingColumn(false)
+      boardState.setEditingColumnId(null)
+    }
   }
 
   return (
@@ -250,6 +276,15 @@ export default function BoardPage() {
                       deletePending={mutations.deleteColumnMutation.isPending}
                     />
                   ))}
+                <div className="flex-shrink-0 w-80">
+                  <button
+                    onClick={handleOpenAddColumn}
+                    className="w-full h-12 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    <PlusIcon className="w-5 h-5 mr-2" />
+                    Add Column
+                  </button>
+                </div>
               </div>
             </DragDropContext>
           </div>
@@ -291,6 +326,16 @@ export default function BoardPage() {
         onSave={handleSaveSettings}
         onClose={boardState.handleCloseSettings}
         savePending={mutations.updateBoardMutation.isPending}
+      />
+
+      <AddColumnModal
+        isOpen={boardState.isAddColumnModalOpen}
+        columnName={boardState.newColumnName}
+        isEditing={boardState.isEditingColumn}
+        onNameChange={boardState.setNewColumnName}
+        onSave={handleSaveColumn}
+        onClose={() => boardState.setIsAddColumnModalOpen(false)}
+        savePending={boardState.isEditingColumn ? mutations.updateColumnMutation.isPending : mutations.createColumnMutation.isPending}
       />
     </PageLayout>
   )

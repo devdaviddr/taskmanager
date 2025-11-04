@@ -85,6 +85,17 @@ export function useBoardMutations(boardId: number) {
     },
   })
 
+  const createColumnMutation = useMutation({
+    mutationFn: ({ boardId, name, position }: { boardId: number; name: string; position: number }) =>
+      columnsAPI.create(boardId, { name, position }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
+    },
+    onError: (error) => {
+      console.error('Failed to create column:', error)
+    },
+  })
+
   const updateBoardMutation = useMutation({
     mutationFn: ({ id, name, background, column_theme }: { id: number; name?: string; background?: string; column_theme?: string }) =>
       boardsAPI.update(id, { name, background, column_theme }),
@@ -102,6 +113,7 @@ export function useBoardMutations(boardId: number) {
     updateItemMutation,
     deleteItemMutation,
     archiveItemMutation,
+    createColumnMutation,
     updateColumnMutation,
     deleteColumnMutation,
     moveColumnMutation,
