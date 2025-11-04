@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import type { DropResult } from '@hello-pangea/dnd'
-import { PencilIcon, TrashIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { PencilIcon, TrashIcon, ChevronLeftIcon, ChevronRightIcon, CogIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import PageLayout from '../components/PageLayout'
 import PageHeader from '../components/PageHeader'
 import { boardsAPI, itemsAPI, columnsAPI } from '../services/api'
@@ -59,6 +59,10 @@ export default function BoardPage() {
   const [editEndDate, setEditEndDate] = useState('')
   const [editEffort, setEditEffort] = useState('')
   const [editLabel, setEditLabel] = useState('')
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
+  const [editBackground, setEditBackground] = useState('')
+  const [editColumnTheme, setEditColumnTheme] = useState('')
+  const [editBoardName, setEditBoardName] = useState('')
 
   const { data: board, isLoading, error } = useQuery({
     queryKey: ['board', boardId],
@@ -151,6 +155,18 @@ export default function BoardPage() {
     onError: (error) => {
       console.error('Failed to move column:', error)
       queryClient.invalidateQueries({ queryKey: ['board', boardId] })
+    },
+  })
+
+  const updateBoardMutation = useMutation({
+    mutationFn: ({ id, name, background, column_theme }: { id: number; name?: string; background?: string; column_theme?: string }) =>
+      boardsAPI.update(id, { name, background, column_theme }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['board', boardId] })
+      setIsSettingsModalOpen(false)
+    },
+    onError: (error) => {
+      console.error('Failed to update board:', error)
     },
   })
 
@@ -270,6 +286,26 @@ export default function BoardPage() {
     }
   }
 
+  const handleOpenSettings = () => {
+    setEditBoardName(board!.name)
+    setEditBackground(board!.background || 'bg-gray-50')
+    setEditColumnTheme(board!.column_theme || 'dark')
+    setIsSettingsModalOpen(true)
+  }
+
+  const handleSaveSettings = () => {
+    updateBoardMutation.mutate({
+      id: board!.id,
+      name: editBoardName,
+      background: editBackground,
+      column_theme: editColumnTheme,
+    })
+  }
+
+  const handleCloseSettings = () => {
+    setIsSettingsModalOpen(false)
+  }
+
   const handleCloseModal = () => {
     setIsModalOpen(false)
     setSelectedCard(null)
@@ -311,7 +347,14 @@ export default function BoardPage() {
     <PageLayout background={board.background || 'bg-gray-50'}>
       <div className="w-full h-full flex flex-col">
         <div className="px-6 py-4">
-          <PageHeader title={board.name} background={board.background} />
+          <PageHeader title={board.name} background={board.background}>
+            <button
+              onClick={handleOpenSettings}
+              className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+            >
+              <CogIcon className="w-5 h-5" />
+            </button>
+          </PageHeader>
         </div>
 
         <div className="flex-1 px-6 pb-6 overflow-x-auto overflow-y-hidden">
@@ -575,6 +618,91 @@ export default function BoardPage() {
                   {updateItemMutation.isPending ? 'Saving...' : 'Save'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Board Settings Modal */}
+      {isSettingsModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Board Settings</h2>
+              <button
+                onClick={handleCloseSettings}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Board Name
+                </label>
+                <input
+                  type="text"
+                  value={editBoardName}
+                  onChange={(e) => setEditBoardName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter board name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Background Color
+                </label>
+                <div className="relative">
+                  <select
+                    value={editBackground}
+                    onChange={(e) => setEditBackground(e.target.value)}
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white appearance-none cursor-pointer"
+                  >
+                    <option value="bg-gray-50">Light Gray</option>
+                    <option value="bg-blue-600">Blue</option>
+                    <option value="bg-green-600">Green</option>
+                    <option value="bg-purple-600">Purple</option>
+                    <option value="bg-red-600">Red</option>
+                  </select>
+                  <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Column Theme
+                </label>
+                <div className="relative">
+                  <select
+                    value={editColumnTheme}
+                    onChange={(e) => setEditColumnTheme(e.target.value)}
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white appearance-none cursor-pointer"
+                  >
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                  </select>
+                  <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 mt-6">
+              <button
+                onClick={handleCloseSettings}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSettings}
+                disabled={updateBoardMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                {updateBoardMutation.isPending ? 'Saving...' : 'Save'}
+              </button>
             </div>
           </div>
         </div>
