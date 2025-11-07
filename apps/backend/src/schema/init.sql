@@ -71,6 +71,7 @@ ALTER TABLE items ADD COLUMN IF NOT EXISTS start_date TIMESTAMP WITH TIME ZONE;
 ALTER TABLE items ADD COLUMN IF NOT EXISTS end_date TIMESTAMP WITH TIME ZONE;
 ALTER TABLE items ADD COLUMN IF NOT EXISTS effort INTEGER CHECK (effort >= 0 AND effort <= 10);
 ALTER TABLE items ADD COLUMN IF NOT EXISTS label TEXT;
+ALTER TABLE items ADD COLUMN IF NOT EXISTS priority VARCHAR(10) CHECK (priority IN ('high', 'medium', 'low'));
 
 -- Set default background for existing boards
 UPDATE boards SET background = 'bg-gray-50' WHERE background IS NULL;

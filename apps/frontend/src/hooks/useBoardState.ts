@@ -10,6 +10,7 @@ interface Item {
   end_date?: string
   effort?: number
   label?: string
+  priority?: 'high' | 'medium' | 'low'
   archived: boolean
   created_at: string
   updated_at: string
@@ -25,6 +26,7 @@ export function useBoardState() {
   const [editEndDate, setEditEndDate] = useState('')
   const [editEffort, setEditEffort] = useState('')
   const [editLabel, setEditLabel] = useState('')
+  const [editPriority, setEditPriority] = useState('')
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
   const [editBackground, setEditBackground] = useState('')
   const [editColumnTheme, setEditColumnTheme] = useState('')
@@ -43,6 +45,7 @@ export function useBoardState() {
     setEditEndDate('')
     setEditEffort('')
     setEditLabel('')
+    setEditPriority('')
   }
 
   const handleCloseSettings = () => {
@@ -68,6 +71,8 @@ export function useBoardState() {
     setEditEffort,
     editLabel,
     setEditLabel,
+    editPriority,
+    setEditPriority,
     isSettingsModalOpen,
     setIsSettingsModalOpen,
     editBackground,

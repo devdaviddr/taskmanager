@@ -2,6 +2,7 @@ import ModalHeader from '../composites/ModalHeader'
 import Button from '../ui/Button'
 import Input from '../ui/Input'
 import Textarea from '../ui/Textarea'
+import Select from '../ui/Select'
 
 interface Item {
   id: number
@@ -13,6 +14,7 @@ interface Item {
   end_date?: string
   effort?: number
   label?: string
+  priority?: 'high' | 'medium' | 'low'
   archived: boolean
   created_at: string
   updated_at: string
@@ -27,12 +29,14 @@ interface CardEditModalProps {
   editEndDate: string
   editEffort: string
   editLabel: string
+  editPriority: string
   onTitleChange: (value: string) => void
   onDescriptionChange: (value: string) => void
   onStartDateChange: (value: string) => void
   onEndDateChange: (value: string) => void
   onEffortChange: (value: string) => void
   onLabelChange: (value: string) => void
+  onPriorityChange: (value: string) => void
   onSave: () => void
   onDelete: () => void
   onArchive: () => void
@@ -51,12 +55,14 @@ export default function CardEditModal({
   editEndDate,
   editEffort,
   editLabel,
+  editPriority,
   onTitleChange,
   onDescriptionChange,
   onStartDateChange,
   onEndDateChange,
   onEffortChange,
   onLabelChange,
+  onPriorityChange,
   onSave,
   onDelete,
   onArchive,
@@ -118,7 +124,7 @@ export default function CardEditModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Label
@@ -142,6 +148,20 @@ export default function CardEditModal({
                 onChange={(e) => onEffortChange(e.target.value)}
                 placeholder="1-10"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Priority
+              </label>
+              <Select
+                value={editPriority}
+                onChange={(e) => onPriorityChange(e.target.value)}
+              >
+                <option value="">None</option>
+                <option value="high">High (^^^)</option>
+                <option value="medium">Medium (^^)</option>
+                <option value="low">Low (^)</option>
+              </Select>
             </div>
           </div>
 

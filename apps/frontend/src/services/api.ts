@@ -30,8 +30,8 @@ export const columnsAPI = {
 export const itemsAPI = {
   getById: (id: number) => api.get(`/items/${id}`),
   getByColumn: (columnId: number) => api.get(`/columns/${columnId}/items`),
-  create: (columnId: number, data: { title: string; description?: string; position?: number; start_date?: string; end_date?: string; effort?: number; label?: string }) => api.post(`/columns/${columnId}/items`, data),
-  update: (id: number, data: { title?: string; description?: string; position?: number; start_date?: string; end_date?: string; effort?: number; label?: string }) => api.put(`/items/${id}`, data),
+  create: (columnId: number, data: { title: string; description?: string; position?: number; start_date?: string; end_date?: string; effort?: number; label?: string; priority?: 'high' | 'medium' | 'low' }) => api.post(`/columns/${columnId}/items`, data),
+  update: (id: number, data: { title?: string; description?: string; position?: number; start_date?: string; end_date?: string; effort?: number; label?: string; priority?: 'high' | 'medium' | 'low' | null }) => api.put(`/items/${id}`, data),
   archive: (id: number, archived: boolean = true) => api.put(`/items/${id}/archive`, { archived }),
   delete: (id: number) => api.delete(`/items/${id}`),
   move: (id: number, data: { column_id: number; position: number }) => api.put(`/items/${id}/move`, data),

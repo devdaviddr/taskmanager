@@ -4,7 +4,7 @@ import type { Item, CreateItemRequest, MoveItemRequest } from '../types';
 export class ItemModel {
   static async findByColumnId(columnId: number): Promise<Item[]> {
     const result = await pool.query(`
-      SELECT id, column_id, title, description, position, start_date, end_date, effort, label, archived, created_at, updated_at
+      SELECT id, column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at
       FROM items
       WHERE column_id = $1 AND archived = FALSE
       ORDER BY position
@@ -14,7 +14,7 @@ export class ItemModel {
 
   static async findById(id: number): Promise<Item | null> {
     const result = await pool.query(`
-      SELECT id, column_id, title, description, position, start_date, end_date, effort, label, archived, created_at, updated_at
+      SELECT id, column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at
       FROM items
       WHERE id = $1
     `, [id]);
@@ -32,10 +32,10 @@ export class ItemModel {
     const position = itemData.position ?? positionResult.rows[0].next_position;
 
     const result = await pool.query(`
-      INSERT INTO items (column_id, title, description, position, start_date, end_date, effort, label, archived, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE, NOW(), NOW())
-      RETURNING id, column_id, title, description, position, start_date, end_date, effort, label, archived, created_at, updated_at
-    `, [columnId, itemData.title, itemData.description || null, position, itemData.start_date || null, itemData.end_date || null, itemData.effort || null, itemData.label || null]);
+      INSERT INTO items (column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, FALSE, NOW(), NOW())
+      RETURNING id, column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at
+    `, [columnId, itemData.title, itemData.description || null, position, itemData.start_date || null, itemData.end_date || null, itemData.effort || null, itemData.label || null, itemData.priority || null]);
     return result.rows[0];
   }
 
@@ -86,6 +86,12 @@ export class ItemModel {
       paramCount++;
     }
 
+    if ('priority' in itemData) {
+      fields.push(`priority = $${paramCount}`);
+      values.push(itemData.priority || null);
+      paramCount++;
+    }
+
     if (fields.length === 0) {
       return null;
     }
@@ -97,7 +103,7 @@ export class ItemModel {
       UPDATE items
       SET ${fields.join(', ')}
       WHERE id = $${paramCount}
-      RETURNING id, column_id, title, description, position, start_date, end_date, effort, label, archived, created_at, updated_at
+      RETURNING id, column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at
     `, values);
 
     return result.rows[0] || null;
@@ -113,7 +119,7 @@ export class ItemModel {
       UPDATE items
       SET archived = $1, updated_at = NOW()
       WHERE id = $2
-      RETURNING id, column_id, title, description, position, start_date, end_date, effort, label, archived, created_at, updated_at
+      RETURNING id, column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at
     `, [archived, id]);
     return result.rows[0] || null;
   }
@@ -176,7 +182,7 @@ export class ItemModel {
         UPDATE items
         SET column_id = $1, position = $2, updated_at = NOW()
         WHERE id = $3
-        RETURNING id, column_id, title, description, position, start_date, end_date, effort, label, archived, created_at, updated_at
+        RETURNING id, column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at
       `, [newColumnId, newPosition, id]);
 
       await client.query('COMMIT');

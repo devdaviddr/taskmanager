@@ -62,6 +62,7 @@ export interface Item {
   end_date?: Date;
   effort?: number;
   label?: string;
+  priority?: 'high' | 'medium' | 'low' | null;
   archived: boolean;
   created_at: Date;
   updated_at: Date;
@@ -81,6 +82,7 @@ export interface CreateItemRequest {
   end_date?: Date;
   effort?: number;
   label?: string;
+  priority?: 'high' | 'medium' | 'low' | null;
 }
 
 export interface MoveItemRequest {

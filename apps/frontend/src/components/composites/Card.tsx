@@ -10,6 +10,7 @@ interface Item {
   end_date?: string
   effort?: number
   label?: string
+  priority?: 'high' | 'medium' | 'low'
   archived: boolean
   created_at: string
   updated_at: string
@@ -20,6 +21,19 @@ interface CardProps {
   index: number
   columnTheme: string
   onClick: () => void
+}
+
+function getPrioritySymbol(priority?: 'high' | 'medium' | 'low'): string {
+  switch (priority) {
+    case 'high':
+      return '^^^'
+    case 'medium':
+      return '^^'
+    case 'low':
+      return '^'
+    default:
+      return ''
+  }
 }
 
 export default function Card({ item, index, columnTheme, onClick }: CardProps) {
@@ -51,6 +65,11 @@ export default function Card({ item, index, columnTheme, onClick }: CardProps) {
               {item.label && (
                 <span className="inline-block bg-blue-500/20 text-blue-600 text-xs px-1.5 py-0.5 rounded font-medium">
                   {item.label}
+                </span>
+              )}
+              {item.priority && (
+                <span className="inline-block bg-red-500/20 text-red-700 text-xs px-1.5 py-0.5 rounded font-medium">
+                  {getPrioritySymbol(item.priority)}
                 </span>
               )}
               {item.effort !== undefined && (

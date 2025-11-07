@@ -148,6 +148,10 @@ export class ItemService {
     if (data.label !== undefined && typeof data.label !== 'string') {
       throw new Error('Validation error: Label must be a string');
     }
+
+    if (data.priority !== undefined && data.priority !== null && !['high', 'medium', 'low'].includes(data.priority)) {
+      throw new Error('Validation error: Priority must be one of: high, medium, low');
+    }
   }
 
   private static validateUpdateItemData(data: Partial<CreateItemRequest>): void {
@@ -191,6 +195,10 @@ export class ItemService {
 
     if (data.label !== undefined && typeof data.label !== 'string') {
       throw new Error('Validation error: Label must be a string');
+    }
+
+    if (data.priority !== undefined && data.priority !== null && !['high', 'medium', 'low'].includes(data.priority)) {
+      throw new Error('Validation error: Priority must be one of: high, medium, low');
     }
   }
 }

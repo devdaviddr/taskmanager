@@ -25,8 +25,8 @@ export function useBoardMutations(boardId: number) {
   })
 
   const updateItemMutation = useMutation({
-    mutationFn: ({ id, title, description, start_date, end_date, effort, label }: { id: number; title: string; description: string; start_date?: string; end_date?: string; effort?: number; label?: string }) =>
-      itemsAPI.update(id, { title, description, start_date, end_date, effort, label }),
+    mutationFn: ({ id, title, description, start_date, end_date, effort, label, priority }: { id: number; title: string; description: string; start_date?: string; end_date?: string; effort?: number; label?: string; priority?: 'high' | 'medium' | 'low' | null }) =>
+      itemsAPI.update(id, { title, description, start_date, end_date, effort, label, priority }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board', boardId] })
     },

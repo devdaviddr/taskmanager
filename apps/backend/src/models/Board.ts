@@ -45,6 +45,7 @@ export class BoardModel {
               'end_date', i.end_date,
               'effort', i.effort,
               'label', i.label,
+              'priority', i.priority,
               'archived', i.archived,
               'created_at', i.created_at,
               'updated_at', i.updated_at

@@ -47,6 +47,7 @@ interface Item {
   end_date?: string
   effort?: number
   label?: string
+  priority?: 'high' | 'medium' | 'low'
   archived: boolean
   created_at: string
   updated_at: string
@@ -122,6 +123,7 @@ export default function BoardPage() {
     boardState.setEditEndDate(item.end_date ? new Date(item.end_date).toISOString().split('T')[0] : '')
     boardState.setEditEffort(item.effort?.toString() || '')
     boardState.setEditLabel(item.label || '')
+    boardState.setEditPriority(item.priority || '')
     boardState.setIsModalOpen(true)
   }
 
@@ -153,6 +155,7 @@ export default function BoardPage() {
         end_date: boardState.editEndDate || undefined,
         effort: effort,
         label: boardState.editLabel || undefined,
+        priority: boardState.editPriority ? (boardState.editPriority as 'high' | 'medium' | 'low') : null,
       })
       boardState.handleCloseModal()
     }
@@ -300,12 +303,14 @@ export default function BoardPage() {
         editEndDate={boardState.editEndDate}
         editEffort={boardState.editEffort}
         editLabel={boardState.editLabel}
+        editPriority={boardState.editPriority}
         onTitleChange={boardState.setEditTitle}
         onDescriptionChange={boardState.setEditDescription}
         onStartDateChange={boardState.setEditStartDate}
         onEndDateChange={boardState.setEditEndDate}
         onEffortChange={boardState.setEditEffort}
         onLabelChange={boardState.setEditLabel}
+        onPriorityChange={boardState.setEditPriority}
         onSave={handleSaveCard}
         onDelete={handleDeleteCard}
         onArchive={handleArchiveCard}
