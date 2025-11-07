@@ -48,7 +48,24 @@ export class BoardModel {
               'priority', i.priority,
               'archived', i.archived,
               'created_at', i.created_at,
-              'updated_at', i.updated_at
+              'updated_at', i.updated_at,
+              'tags', COALESCE(
+                (
+                  SELECT json_agg(
+                    json_build_object(
+                      'id', t.id,
+                      'name', t.name,
+                      'color', t.color,
+                      'created_at', t.created_at,
+                      'updated_at', t.updated_at
+                    )
+                  )
+                  FROM item_tags it2
+                  JOIN tags t ON it2.tag_id = t.id
+                  WHERE it2.item_id = i.id
+                ),
+                '[]'::json
+              )
             ) ORDER BY i.position
           ) FILTER (WHERE i.id IS NOT NULL AND i.archived = FALSE),
           '[]'::json

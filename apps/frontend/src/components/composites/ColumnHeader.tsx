@@ -22,7 +22,17 @@ interface Item {
   end_date?: string
   effort?: number
   label?: string
+  priority?: 'high' | 'medium' | 'low'
+  tags?: Tag[]
   archived: boolean
+  created_at: string
+  updated_at: string
+}
+
+interface Tag {
+  id: number
+  name: string
+  color: string
   created_at: string
   updated_at: string
 }

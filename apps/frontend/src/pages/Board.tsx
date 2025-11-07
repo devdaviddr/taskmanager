@@ -5,7 +5,7 @@ import type { DropResult } from '@hello-pangea/dnd'
 import { CogIcon, PlusIcon } from '@heroicons/react/24/outline'
 import PageLayout from '../components/PageLayout'
 import PageHeader from '../components/PageHeader'
-import { boardsAPI } from '../services/api'
+import { boardsAPI, tagsAPI } from '../services/api'
 import { useBoardState } from '../hooks/useBoardState'
 import { useBoardMutations } from '../hooks/useBoardMutations'
 import Column from '../components/sections/Column'
@@ -49,7 +49,16 @@ interface Item {
   effort?: number
   label?: string
   priority?: 'high' | 'medium' | 'low'
+  tags?: Tag[]
   archived: boolean
+  created_at: string
+  updated_at: string
+}
+
+interface Tag {
+  id: number
+  name: string
+  color: string
   created_at: string
   updated_at: string
 }
@@ -69,6 +78,14 @@ export default function BoardPage() {
       return response.data as Board
     },
     enabled: !!boardId,
+  })
+
+  const { data: availableTags = [] } = useQuery({
+    queryKey: ['tags'],
+    queryFn: async () => {
+      const response = await tagsAPI.getAll()
+      return response.data
+    },
   })
 
   if (isLoading) {
@@ -126,10 +143,11 @@ export default function BoardPage() {
     boardState.setEditEffort(item.effort?.toString() || '')
     boardState.setEditLabel(item.label || '')
     boardState.setEditPriority(item.priority || '')
+    boardState.setEditTags(item.tags || [])
     boardState.setIsModalOpen(true)
   }
 
-  const handleSaveCard = () => {
+  const handleSaveCard = async () => {
     if (boardState.selectedCard) {
       if (boardState.editStartDate && !validateDate(boardState.editStartDate)) {
         alert('Invalid start date')
@@ -149,17 +167,40 @@ export default function BoardPage() {
         }
       }
 
-      mutations.updateItemMutation.mutate({
-        id: boardState.selectedCard.id,
-        title: boardState.editTitle,
-        description: boardState.editDescription,
-        start_date: boardState.editStartDate || undefined,
-        end_date: boardState.editEndDate || undefined,
-        effort: effort,
-        label: boardState.editLabel || undefined,
-        priority: boardState.editPriority ? (boardState.editPriority as 'high' | 'medium' | 'low') : null,
-      })
-      boardState.handleCloseModal()
+      try {
+        // Handle new tags that need to be created
+        const newTags = boardState.editTags.filter(tag => tag.id > 1000000000000) // Temporary IDs from Date.now()
+        const existingTags = boardState.editTags.filter(tag => tag.id <= 1000000000000)
+
+        let allTagIds = existingTags.map(tag => tag.id)
+
+        // Create new tags
+        for (const newTag of newTags) {
+          try {
+            const response = await tagsAPI.create({ name: newTag.name, color: newTag.color })
+            allTagIds = [...allTagIds, response.data.id]
+          } catch (error) {
+            console.error('Failed to create tag:', error)
+            // Continue with other tags
+          }
+        }
+
+        mutations.updateItemMutation.mutate({
+          id: boardState.selectedCard.id,
+          title: boardState.editTitle,
+          description: boardState.editDescription,
+          start_date: boardState.editStartDate || undefined,
+          end_date: boardState.editEndDate || undefined,
+          effort: effort,
+          label: boardState.editLabel === '' ? null : boardState.editLabel,
+          priority: boardState.editPriority ? (boardState.editPriority as 'high' | 'medium' | 'low') : null,
+          tag_ids: allTagIds,
+        })
+        boardState.handleCloseModal()
+      } catch (error) {
+        console.error('Failed to save card:', error)
+        alert('Failed to save card. Please try again.')
+      }
     }
   }
 
@@ -330,6 +371,8 @@ export default function BoardPage() {
         editEffort={boardState.editEffort}
         editLabel={boardState.editLabel}
         editPriority={boardState.editPriority}
+        editTags={boardState.editTags}
+        availableTags={availableTags}
         onTitleChange={boardState.setEditTitle}
         onDescriptionChange={boardState.setEditDescription}
         onStartDateChange={boardState.setEditStartDate}
@@ -337,6 +380,7 @@ export default function BoardPage() {
         onEffortChange={boardState.setEditEffort}
         onLabelChange={boardState.setEditLabel}
         onPriorityChange={boardState.setEditPriority}
+        onTagsChange={boardState.setEditTags}
         onSave={handleSaveCard}
         onDelete={handleDeleteCard}
         onArchive={handleArchiveCard}

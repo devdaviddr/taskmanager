@@ -11,7 +11,16 @@ interface Item {
   effort?: number
   label?: string
   priority?: 'high' | 'medium' | 'low'
+  tags?: Tag[]
   archived: boolean
+  created_at: string
+  updated_at: string
+}
+
+interface Tag {
+  id: number
+  name: string
+  color: string
   created_at: string
   updated_at: string
 }
@@ -27,6 +36,7 @@ export function useBoardState() {
   const [editEffort, setEditEffort] = useState('')
   const [editLabel, setEditLabel] = useState('')
   const [editPriority, setEditPriority] = useState('')
+  const [editTags, setEditTags] = useState<Tag[]>([])
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
   const [editBackground, setEditBackground] = useState('')
   const [editColumnTheme, setEditColumnTheme] = useState('')
@@ -47,6 +57,7 @@ export function useBoardState() {
     setEditEffort('')
     setEditLabel('')
     setEditPriority('')
+    setEditTags([])
   }
 
   const handleCloseSettings = () => {
@@ -74,6 +85,8 @@ export function useBoardState() {
     setEditLabel,
     editPriority,
     setEditPriority,
+    editTags,
+    setEditTags,
     isSettingsModalOpen,
     setIsSettingsModalOpen,
     editBackground,

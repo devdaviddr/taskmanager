@@ -73,6 +73,7 @@ export interface Item {
   effort?: number;
   label?: string;
   priority?: 'high' | 'medium' | 'low' | null;
+  tags?: Tag[];
   archived: boolean;
   created_at: Date;
   updated_at: Date;
@@ -91,13 +92,27 @@ export interface CreateItemRequest {
   start_date?: Date;
   end_date?: Date;
   effort?: number;
-  label?: string;
+  label?: string | null;
   priority?: 'high' | 'medium' | 'low' | null;
+  tag_ids?: number[];
 }
 
 export interface MoveItemRequest {
   column_id: number;
   position: number;
+}
+
+export interface Tag {
+  id: number;
+  name: string;
+  color: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface CreateTagRequest {
+  name: string;
+  color?: string;
 }
 
 export interface BoardWithColumns extends Board {

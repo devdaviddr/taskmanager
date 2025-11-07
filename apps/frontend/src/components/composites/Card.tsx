@@ -11,7 +11,16 @@ interface Item {
   effort?: number
   label?: string
   priority?: 'high' | 'medium' | 'low'
+  tags?: Tag[]
   archived: boolean
+  created_at: string
+  updated_at: string
+}
+
+interface Tag {
+  id: number
+  name: string
+  color: string
   created_at: string
   updated_at: string
 }
@@ -101,6 +110,15 @@ export default function Card({ item, index, columnTheme, onClick }: CardProps) {
                   {dueInfo.text}
                 </span>
               )}
+              {item.tags && item.tags.map(tag => (
+                <span
+                  key={tag.id}
+                  className="inline-block text-xs px-1.5 py-0.5 rounded font-medium text-white"
+                  style={{ backgroundColor: tag.color }}
+                >
+                  {tag.name}
+                </span>
+              ))}
             </div>
 
           </div>

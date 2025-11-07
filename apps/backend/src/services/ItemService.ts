@@ -152,6 +152,10 @@ export class ItemService {
     if (data.priority !== undefined && data.priority !== null && !['high', 'medium', 'low'].includes(data.priority)) {
       throw new Error('Validation error: Priority must be one of: high, medium, low');
     }
+
+    if (data.tag_ids !== undefined && (!Array.isArray(data.tag_ids) || !data.tag_ids.every(id => typeof id === 'number'))) {
+      throw new Error('Validation error: Tag IDs must be an array of numbers');
+    }
   }
 
   private static validateUpdateItemData(data: Partial<CreateItemRequest>): void {
@@ -193,12 +197,16 @@ export class ItemService {
       throw new Error('Validation error: Effort must be a number between 0 and 10');
     }
 
-    if (data.label !== undefined && typeof data.label !== 'string') {
-      throw new Error('Validation error: Label must be a string');
+    if (data.label !== undefined && data.label !== null && typeof data.label !== 'string') {
+      throw new Error('Validation error: Label must be a string or null');
     }
 
     if (data.priority !== undefined && data.priority !== null && !['high', 'medium', 'low'].includes(data.priority)) {
       throw new Error('Validation error: Priority must be one of: high, medium, low');
+    }
+
+    if (data.tag_ids !== undefined && (!Array.isArray(data.tag_ids) || !data.tag_ids.every(id => typeof id === 'number'))) {
+      throw new Error('Validation error: Tag IDs must be an array of numbers');
     }
   }
 }

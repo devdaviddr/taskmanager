@@ -4,109 +4,190 @@ import type { Item, CreateItemRequest, MoveItemRequest } from '../types';
 export class ItemModel {
   static async findByColumnId(columnId: number): Promise<Item[]> {
     const result = await pool.query(`
-      SELECT id, column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at
-      FROM items
-      WHERE column_id = $1 AND archived = FALSE
-      ORDER BY position
+      SELECT
+        i.id, i.column_id, i.title, i.description, i.position, i.start_date, i.end_date, i.effort, i.label, i.priority, i.archived, i.created_at, i.updated_at,
+        COALESCE(json_agg(
+          json_build_object(
+            'id', t.id,
+            'name', t.name,
+            'color', t.color,
+            'created_at', t.created_at,
+            'updated_at', t.updated_at
+          )
+        ) FILTER (WHERE t.id IS NOT NULL), '[]'::json) as tags
+      FROM items i
+      LEFT JOIN item_tags it ON i.id = it.item_id
+      LEFT JOIN tags t ON it.tag_id = t.id
+      WHERE i.column_id = $1 AND i.archived = FALSE
+      GROUP BY i.id
+      ORDER BY i.position
     `, [columnId]);
     return result.rows;
   }
 
   static async findById(id: number): Promise<Item | null> {
     const result = await pool.query(`
-      SELECT id, column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at
-      FROM items
-      WHERE id = $1
+      SELECT
+        i.id, i.column_id, i.title, i.description, i.position, i.start_date, i.end_date, i.effort, i.label, i.priority, i.archived, i.created_at, i.updated_at,
+        COALESCE(json_agg(
+          json_build_object(
+            'id', t.id,
+            'name', t.name,
+            'color', t.color,
+            'created_at', t.created_at,
+            'updated_at', t.updated_at
+          )
+        ) FILTER (WHERE t.id IS NOT NULL), '[]'::json) as tags
+      FROM items i
+      LEFT JOIN item_tags it ON i.id = it.item_id
+      LEFT JOIN tags t ON it.tag_id = t.id
+      WHERE i.id = $1
+      GROUP BY i.id
     `, [id]);
     return result.rows[0] || null;
   }
 
   static async create(columnId: number, itemData: CreateItemRequest): Promise<Item> {
-    // Get the highest position for this column
-    const positionResult = await pool.query(`
-      SELECT COALESCE(MAX(position), -1) + 1 as next_position
-      FROM items
-      WHERE column_id = $1
-    `, [columnId]);
+    const client = await pool.connect();
 
-    const position = itemData.position ?? positionResult.rows[0].next_position;
+    try {
+      await client.query('BEGIN');
 
-    const result = await pool.query(`
-      INSERT INTO items (column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, FALSE, NOW(), NOW())
-      RETURNING id, column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at
-    `, [columnId, itemData.title, itemData.description || null, position, itemData.start_date || null, itemData.end_date || null, itemData.effort || null, itemData.label || null, itemData.priority || null]);
-    return result.rows[0];
+      // Get the highest position for this column
+      const positionResult = await client.query(`
+        SELECT COALESCE(MAX(position), -1) + 1 as next_position
+        FROM items
+        WHERE column_id = $1
+      `, [columnId]);
+
+      const position = itemData.position ?? positionResult.rows[0].next_position;
+
+      const result = await client.query(`
+        INSERT INTO items (column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, FALSE, NOW(), NOW())
+        RETURNING id, column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at
+      `, [columnId, itemData.title, itemData.description || null, position, itemData.start_date || null, itemData.end_date || null, itemData.effort || null, itemData.label || null, itemData.priority || null]);
+
+      const item = result.rows[0];
+
+      // Handle tags if provided
+      if (itemData.tag_ids && itemData.tag_ids.length > 0) {
+        const tagValues = itemData.tag_ids.map((tagId, index) => `($1, $${index + 2})`).join(', ');
+        const tagParams = [item.id, ...itemData.tag_ids];
+        await client.query(`
+          INSERT INTO item_tags (item_id, tag_id)
+          VALUES ${tagValues}
+        `, tagParams);
+      }
+
+      await client.query('COMMIT');
+
+      // Fetch the complete item with tags
+      return await this.findById(item.id) as Item;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   static async update(id: number, itemData: Partial<CreateItemRequest>): Promise<Item | null> {
-    const fields = [];
-    const values = [];
-    let paramCount = 1;
+    const client = await pool.connect();
 
-    if (itemData.title !== undefined) {
-      fields.push(`title = $${paramCount}`);
-      values.push(itemData.title);
-      paramCount++;
+    try {
+      await client.query('BEGIN');
+
+      const fields = [];
+      const values = [];
+      let paramCount = 1;
+
+      if (itemData.title !== undefined) {
+        fields.push(`title = $${paramCount}`);
+        values.push(itemData.title);
+        paramCount++;
+      }
+
+      if (itemData.description !== undefined) {
+        fields.push(`description = $${paramCount}`);
+        values.push(itemData.description);
+        paramCount++;
+      }
+
+      if (itemData.position !== undefined) {
+        fields.push(`position = $${paramCount}`);
+        values.push(itemData.position);
+        paramCount++;
+      }
+
+      if (itemData.start_date !== undefined) {
+        fields.push(`start_date = $${paramCount}`);
+        values.push(itemData.start_date);
+        paramCount++;
+      }
+
+      if (itemData.end_date !== undefined) {
+        fields.push(`end_date = $${paramCount}`);
+        values.push(itemData.end_date);
+        paramCount++;
+      }
+
+      if (itemData.effort !== undefined) {
+        fields.push(`effort = $${paramCount}`);
+        values.push(itemData.effort);
+        paramCount++;
+      }
+
+      if ('label' in itemData) {
+        fields.push(`label = $${paramCount}`);
+        values.push(itemData.label || null);
+        paramCount++;
+      }
+
+      if ('priority' in itemData) {
+        fields.push(`priority = $${paramCount}`);
+        values.push(itemData.priority || null);
+        paramCount++;
+      }
+
+      if (fields.length > 0) {
+        fields.push(`updated_at = NOW()`);
+        values.push(id);
+
+        const result = await client.query(`
+          UPDATE items
+          SET ${fields.join(', ')}
+          WHERE id = $${paramCount}
+          RETURNING id
+        `, values);
+      }
+
+      // Handle tags if provided
+      if (itemData.tag_ids !== undefined) {
+        // Remove all existing tags for this item
+        await client.query('DELETE FROM item_tags WHERE item_id = $1', [id]);
+
+        // Add new tags if any
+        if (itemData.tag_ids.length > 0) {
+          const tagValues = itemData.tag_ids.map((tagId, index) => `($1, $${index + 2})`).join(', ');
+          const tagParams = [id, ...itemData.tag_ids];
+          await client.query(`
+            INSERT INTO item_tags (item_id, tag_id)
+            VALUES ${tagValues}
+          `, tagParams);
+        }
+      }
+
+      await client.query('COMMIT');
+
+      // Fetch the complete item with tags
+      return await this.findById(id);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
     }
-
-    if (itemData.description !== undefined) {
-      fields.push(`description = $${paramCount}`);
-      values.push(itemData.description);
-      paramCount++;
-    }
-
-    if (itemData.position !== undefined) {
-      fields.push(`position = $${paramCount}`);
-      values.push(itemData.position);
-      paramCount++;
-    }
-
-    if (itemData.start_date !== undefined) {
-      fields.push(`start_date = $${paramCount}`);
-      values.push(itemData.start_date);
-      paramCount++;
-    }
-
-    if (itemData.end_date !== undefined) {
-      fields.push(`end_date = $${paramCount}`);
-      values.push(itemData.end_date);
-      paramCount++;
-    }
-
-    if (itemData.effort !== undefined) {
-      fields.push(`effort = $${paramCount}`);
-      values.push(itemData.effort);
-      paramCount++;
-    }
-
-    if (itemData.label !== undefined) {
-      fields.push(`label = $${paramCount}`);
-      values.push(itemData.label);
-      paramCount++;
-    }
-
-    if ('priority' in itemData) {
-      fields.push(`priority = $${paramCount}`);
-      values.push(itemData.priority || null);
-      paramCount++;
-    }
-
-    if (fields.length === 0) {
-      return null;
-    }
-
-    fields.push(`updated_at = NOW()`);
-    values.push(id);
-
-    const result = await pool.query(`
-      UPDATE items
-      SET ${fields.join(', ')}
-      WHERE id = $${paramCount}
-      RETURNING id, column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at
-    `, values);
-
-    return result.rows[0] || null;
   }
 
   static async delete(id: number): Promise<boolean> {
@@ -119,9 +200,15 @@ export class ItemModel {
       UPDATE items
       SET archived = $1, updated_at = NOW()
       WHERE id = $2
-      RETURNING id, column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at
+      RETURNING id
     `, [archived, id]);
-    return result.rows[0] || null;
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    // Fetch the complete item with tags
+    return await this.findById(id);
   }
 
   static async moveItem(id: number, moveData: MoveItemRequest): Promise<Item | null> {
@@ -182,11 +269,13 @@ export class ItemModel {
         UPDATE items
         SET column_id = $1, position = $2, updated_at = NOW()
         WHERE id = $3
-        RETURNING id, column_id, title, description, position, start_date, end_date, effort, label, priority, archived, created_at, updated_at
+        RETURNING id
       `, [newColumnId, newPosition, id]);
 
       await client.query('COMMIT');
-      return result.rows[0];
+
+      // Fetch the complete item with tags
+      return await this.findById(id);
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;

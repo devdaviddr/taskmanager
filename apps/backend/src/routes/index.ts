@@ -3,6 +3,7 @@ import taskRoutes from './tasks';
 import boardRoutes from './boards';
 import columnRoutes from './columns';
 import itemRoutes from './items';
+import tagRoutes from './tags';
 
 const router = new Hono();
 
@@ -32,5 +33,6 @@ router.route('/', taskRoutes);
 router.route('/', boardRoutes);
 router.route('/', columnRoutes);
 router.route('/', itemRoutes);
+router.route('/', tagRoutes);
 
 export default router;

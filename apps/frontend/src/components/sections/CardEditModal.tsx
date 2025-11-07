@@ -3,6 +3,7 @@ import Button from '../ui/Button'
 import Input from '../ui/Input'
 import Textarea from '../ui/Textarea'
 import Select from '../ui/Select'
+import { useState } from 'react'
 
 interface Item {
   id: number
@@ -15,7 +16,16 @@ interface Item {
   effort?: number
   label?: string
   priority?: 'high' | 'medium' | 'low'
+  tags?: Tag[]
   archived: boolean
+  created_at: string
+  updated_at: string
+}
+
+interface Tag {
+  id: number
+  name: string
+  color: string
   created_at: string
   updated_at: string
 }
@@ -30,6 +40,8 @@ interface CardEditModalProps {
   editEffort: string
   editLabel: string
   editPriority: string
+  editTags: Tag[]
+  availableTags: Tag[]
   onTitleChange: (value: string) => void
   onDescriptionChange: (value: string) => void
   onStartDateChange: (value: string) => void
@@ -37,6 +49,7 @@ interface CardEditModalProps {
   onEffortChange: (value: string) => void
   onLabelChange: (value: string) => void
   onPriorityChange: (value: string) => void
+  onTagsChange: (tags: Tag[]) => void
   onSave: () => void
   onDelete: () => void
   onArchive: () => void
@@ -56,6 +69,8 @@ export default function CardEditModal({
   editEffort,
   editLabel,
   editPriority,
+  editTags,
+  availableTags,
   onTitleChange,
   onDescriptionChange,
   onStartDateChange,
@@ -63,6 +78,7 @@ export default function CardEditModal({
   onEffortChange,
   onLabelChange,
   onPriorityChange,
+  onTagsChange,
   onSave,
   onDelete,
   onArchive,
@@ -71,6 +87,13 @@ export default function CardEditModal({
   deletePending,
   archivePending
 }: CardEditModalProps) {
+  const [tagInput, setTagInput] = useState('')
+  const [showDropdown, setShowDropdown] = useState(false)
+
+  const filteredTags = tagInput
+    ? availableTags.filter(tag => tag.name.toLowerCase().includes(tagInput.toLowerCase()) && !editTags.find(t => t.id === tag.id))
+    : availableTags.filter(tag => !editTags.find(t => t.id === tag.id))
+
   if (!isOpen || !selectedCard) return null
 
   return (
@@ -163,6 +186,86 @@ export default function CardEditModal({
                 <option value="low">Low (^)</option>
               </Select>
             </div>
+          </div>
+
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tags
+            </label>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {editTags.map(tag => (
+                <span
+                  key={tag.id}
+                  className="inline-flex items-center text-xs px-2 py-1 rounded-full text-white"
+                  style={{ backgroundColor: tag.color }}
+                >
+                  {tag.name}
+                  <button
+                    type="button"
+                    onClick={() => onTagsChange(editTags.filter(t => t.id !== tag.id))}
+                    className="ml-1 text-white hover:text-gray-200"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+            <Input
+              type="text"
+              value={tagInput}
+              onChange={(e) => {
+                setTagInput(e.target.value)
+                setShowDropdown(true)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  const trimmed = tagInput.trim()
+                  if (trimmed) {
+                    const existing = availableTags.find(t => t.name.toLowerCase() === trimmed.toLowerCase())
+                    if (existing && !editTags.find(t => t.id === existing.id)) {
+                      onTagsChange([...editTags, existing])
+                    } else if (!existing) {
+                      const tempTag = {
+                        id: Date.now(),
+                        name: trimmed,
+                        color: '#3B82F6',
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                      }
+                      onTagsChange([...editTags, tempTag])
+                    }
+                    setTagInput('')
+                    setShowDropdown(false)
+                  }
+                }
+              }}
+              onFocus={() => setShowDropdown(true)}
+              onBlur={() => setTimeout(() => setShowDropdown(false), 100)}
+              placeholder="Type to add or create tag..."
+            />
+            {showDropdown && (
+              <div className="absolute z-[60] bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto w-full mt-1">
+                {filteredTags.length > 0 ? (
+                  filteredTags.map(tag => (
+                    <div
+                      key={tag.id}
+                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer flex items-center"
+                      onClick={() => {
+                        onTagsChange([...editTags, tag])
+                        setTagInput('')
+                        setShowDropdown(false)
+                      }}
+                    >
+                      <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: tag.color }}></span>
+                      {tag.name}
+                    </div>
+                  ))
+                ) : tagInput ? (
+                  <div className="px-3 py-2 text-gray-500">No matching tags</div>
+                ) : null}
+              </div>
+            )}
           </div>
 
           <div className="text-xs text-gray-400">
