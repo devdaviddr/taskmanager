@@ -1,0 +1,40 @@
+erDiagram
+    BOARDS ||--o{ COLUMNS : "has"
+    COLUMNS ||--o{ ITEMS : "has"
+
+    BOARDS {
+        int id PK
+        varchar(255) name
+        text description
+        varchar(255) background
+        varchar(255) column_theme
+        boolean archived
+        int user_id
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    COLUMNS {
+        int id PK
+        int board_id FK
+        varchar(100) name
+        int position
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ITEMS {
+        int id PK
+        int column_id FK
+        varchar(255) title
+        text description
+        int position
+        boolean archived
+        timestamp created_at
+        timestamp updated_at
+        timestamp start_date
+        timestamp end_date
+        int effort
+        text label
+        varchar(10) priority
+    }

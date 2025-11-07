@@ -36,9 +36,26 @@ function getPrioritySymbol(priority?: 'high' | 'medium' | 'low'): string {
   }
 }
 
+function getDueInfo(end_date?: string): { text: string; isOverdue: boolean } | null {
+  if (!end_date) return null
+  const now = new Date()
+  const due = new Date(end_date)
+  const diffTime = due.getTime() - now.getTime()
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  if (diffDays > 0) {
+    return { text: `${diffDays} days`, isOverdue: false }
+  } else if (diffDays === 0) {
+    return { text: 'Due today', isOverdue: false }
+  } else {
+    const overdueDays = Math.abs(diffDays)
+    return { text: `${overdueDays} days overdue!`, isOverdue: true }
+  }
+}
+
 export default function Card({ item, index, columnTheme, onClick }: CardProps) {
   const columnClasses = columnTheme === 'dark' ? 'bg-black/70' : 'bg-white'
   const textClasses = columnTheme === 'dark' ? 'text-white' : 'text-black'
+  const dueInfo = getDueInfo(item.end_date)
 
   return (
     <Draggable key={item.id} draggableId={item.id.toString()} index={index}>
@@ -77,18 +94,15 @@ export default function Card({ item, index, columnTheme, onClick }: CardProps) {
                   ⚡{item.effort}
                 </span>
               )}
+              {dueInfo && (
+                <span className={`inline-block text-xs px-1.5 py-0.5 rounded font-medium ${
+                  dueInfo.isOverdue ? 'bg-red-500/20 text-red-700' : 'bg-orange-500/20 text-orange-700'
+                }`}>
+                  {dueInfo.text}
+                </span>
+              )}
             </div>
 
-            {(item.start_date || item.end_date) && (
-              <div className="flex items-center gap-2 pt-1 border-t border-gray-200/50">
-                {item.start_date && (
-                  <span className={`${textClasses}/60 text-xs`}>start: {new Date(item.start_date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
-                )}
-                {item.end_date && (
-                  <span className={`${textClasses}/60 text-xs`}>end: {new Date(item.end_date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
-                )}
-              </div>
-            )}
           </div>
         </div>
       )}
