@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS boards (
   description TEXT,
   background VARCHAR(255) DEFAULT 'bg-gray-50',
   column_theme VARCHAR(255) DEFAULT 'dark',
+  archived BOOLEAN NOT NULL DEFAULT FALSE,
   user_id INTEGER NOT NULL DEFAULT 1, -- Default user for now
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -52,6 +53,7 @@ CREATE TABLE IF NOT EXISTS items (
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_boards_user_id ON boards(user_id);
 CREATE INDEX IF NOT EXISTS idx_boards_created_at ON boards(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_boards_archived ON boards(archived);
 CREATE INDEX IF NOT EXISTS idx_columns_board_id ON columns(board_id);
 CREATE INDEX IF NOT EXISTS idx_columns_position ON columns(board_id, position);
 CREATE INDEX IF NOT EXISTS idx_items_column_id ON items(column_id);
@@ -65,6 +67,9 @@ ALTER TABLE boards ADD COLUMN IF NOT EXISTS background VARCHAR(255) DEFAULT 'bg-
 
 -- Add column_theme column to boards table if it doesn't exist (for migrations)
 ALTER TABLE boards ADD COLUMN IF NOT EXISTS column_theme VARCHAR(255) DEFAULT 'dark';
+
+-- Add archived column to boards table if it doesn't exist (for migrations)
+ALTER TABLE boards ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Add new fields to items table for enhanced task management
 ALTER TABLE items ADD COLUMN IF NOT EXISTS start_date TIMESTAMP WITH TIME ZONE;

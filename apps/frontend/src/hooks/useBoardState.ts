@@ -31,6 +31,7 @@ export function useBoardState() {
   const [editBackground, setEditBackground] = useState('')
   const [editColumnTheme, setEditColumnTheme] = useState('')
   const [editBoardName, setEditBoardName] = useState('')
+  const [editArchived, setEditArchived] = useState(false)
   const [isAddColumnModalOpen, setIsAddColumnModalOpen] = useState(false)
   const [newColumnName, setNewColumnName] = useState('')
   const [isEditingColumn, setIsEditingColumn] = useState(false)
@@ -81,6 +82,8 @@ export function useBoardState() {
     setEditColumnTheme,
     editBoardName,
     setEditBoardName,
+    editArchived,
+    setEditArchived,
     isAddColumnModalOpen,
     setIsAddColumnModalOpen,
     newColumnName,

@@ -1,6 +1,6 @@
 import type { Context } from 'hono';
 import { BoardService } from '../services/BoardService';
-import type { CreateBoardRequest } from '../types';
+import type { CreateBoardRequest, UpdateBoardRequest } from '../types';
 
 export class BoardController {
   static async getAll(c: Context) {
@@ -72,7 +72,7 @@ export class BoardController {
         return c.json({ error: 'Invalid board ID' }, 400);
       }
 
-      const body: Partial<CreateBoardRequest> = await c.req.json();
+      const body: Partial<UpdateBoardRequest> = await c.req.json();
       const board = await BoardService.updateBoard(id, body);
 
       return c.json(board);

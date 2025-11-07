@@ -10,6 +10,7 @@ interface Board {
   name: string
   description?: string
   background?: string
+  archived: boolean
   user_id: number
   created_at: string
   updated_at: string
@@ -24,6 +25,7 @@ export default function Dashboard() {
   const [newBoardDescription, setNewBoardDescription] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'name' | 'created_at'>('created_at')
+  const [showArchived, setShowArchived] = useState(false)
   const [menuOpen, setMenuOpen] = useState<number | null>(null)
 
   const { data: boards = [], isLoading, error } = useQuery({
@@ -102,6 +104,7 @@ export default function Dashboard() {
   }
 
   const filteredAndSortedBoards = boards
+    .filter(board => showArchived || !board.archived)
     .filter(board =>
       board.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (board.description && board.description.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -161,14 +164,27 @@ export default function Dashboard() {
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-64"
                 />
               </div>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'name' | 'created_at')}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="created_at">Sort by Date</option>
-                <option value="name">Sort by Name</option>
-              </select>
+               <select
+                 value={sortBy}
+                 onChange={(e) => setSortBy(e.target.value as 'name' | 'created_at')}
+                 className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+               >
+                 <option value="created_at">Sort by Date</option>
+                 <option value="name">Sort by Name</option>
+               </select>
+               <button
+                 onClick={() => setShowArchived(!showArchived)}
+                 className={`inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                   showArchived
+                     ? 'text-blue-700 bg-blue-50 border-blue-300 hover:bg-blue-100'
+                     : 'text-gray-700 bg-white border-gray-300 hover:bg-gray-50'
+                 }`}
+               >
+                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                 </svg>
+                 {showArchived ? 'Hide Archived' : 'Show Archived'}
+               </button>
               <button
                 onClick={handleCreateBoard}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -197,19 +213,24 @@ export default function Dashboard() {
                 <div
                   key={board.id}
                   onClick={() => handleBoardClick(board.id)}
-                  className={`relative bg-gradient-to-br ${gradient} rounded-xl shadow-lg border border-white/20 p-6 hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer group overflow-hidden`}
+                  className={`relative bg-gradient-to-br ${gradient} rounded-xl shadow-lg border border-white/20 p-6 hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer group overflow-hidden ${board.archived ? 'opacity-60' : ''}`}
                 >
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300"></div>
                   <div className="relative z-10">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-white mb-2 line-clamp-1">{board.name}</h3>
-                        {board.description && (
-                          <p className="text-white/80 text-sm mb-3 line-clamp-2">{board.description}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <button
+                     <div className="flex items-start justify-between mb-4">
+                       <div className="flex-1">
+                         <h3 className="text-xl font-bold text-white mb-2 line-clamp-1">{board.name}</h3>
+                         {board.description && (
+                           <p className="text-white/80 text-sm mb-3 line-clamp-2">{board.description}</p>
+                         )}
+                       </div>
+                       <div className="flex items-center space-x-2">
+                         {board.archived && (
+                           <span className="px-2 py-1 text-xs font-medium text-white bg-black/30 rounded-full">
+                             Archived
+                           </span>
+                         )}
+                         <button
                           onClick={(e) => {
                             e.stopPropagation()
                             setMenuOpen(menuOpen === board.id ? null : board.id)

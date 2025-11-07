@@ -97,13 +97,24 @@ export function useBoardMutations(boardId: number) {
   })
 
   const updateBoardMutation = useMutation({
-    mutationFn: ({ id, name, background, column_theme }: { id: number; name?: string; background?: string; column_theme?: string }) =>
-      boardsAPI.update(id, { name, background, column_theme }),
+    mutationFn: ({ id, name, background, column_theme, archived }: { id: number; name?: string; background?: string; column_theme?: string; archived?: boolean }) =>
+      boardsAPI.update(id, { name, background, column_theme, archived }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board', boardId] })
+      queryClient.invalidateQueries({ queryKey: ['boards'] })
     },
     onError: (error) => {
       console.error('Failed to update board:', error)
+    },
+  })
+
+  const deleteBoardMutation = useMutation({
+    mutationFn: (id: number) => boardsAPI.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['boards'] })
+    },
+    onError: (error) => {
+      console.error('Failed to delete board:', error)
     },
   })
 
@@ -117,6 +128,7 @@ export function useBoardMutations(boardId: number) {
     updateColumnMutation,
     deleteColumnMutation,
     moveColumnMutation,
-    updateBoardMutation
+    updateBoardMutation,
+    deleteBoardMutation
   }
 }

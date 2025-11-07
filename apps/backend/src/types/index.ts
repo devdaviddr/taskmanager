@@ -31,6 +31,7 @@ export interface Board {
   description?: string;
   background?: string;
   column_theme?: string;
+  archived: boolean;
   user_id: number;
   created_at: Date;
   updated_at: Date;
@@ -41,6 +42,15 @@ export interface CreateBoardRequest {
   description?: string;
   background?: string;
   column_theme?: string;
+  archived?: boolean;
+}
+
+export interface UpdateBoardRequest {
+  name?: string;
+  description?: string;
+  background?: string;
+  column_theme?: string;
+  archived?: boolean;
 }
 
 export interface Column {

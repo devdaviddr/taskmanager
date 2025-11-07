@@ -13,7 +13,11 @@ interface BoardSettingsModalProps {
   onThemeChange: (value: string) => void
   onSave: () => void
   onClose: () => void
+  onArchive: () => void
+  onDelete: () => void
   savePending: boolean
+  archivePending: boolean
+  deletePending: boolean
 }
 
 export default function BoardSettingsModal({
@@ -26,7 +30,11 @@ export default function BoardSettingsModal({
   onThemeChange,
   onSave,
   onClose,
-  savePending
+  onArchive,
+  onDelete,
+  savePending,
+  archivePending,
+  deletePending
 }: BoardSettingsModalProps) {
   if (!isOpen) return null
 
@@ -90,6 +98,32 @@ export default function BoardSettingsModal({
           >
             {savePending ? 'Saving...' : 'Save'}
           </Button>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="text-sm text-gray-500 mb-2">
+            Danger zone
+          </div>
+          <div className="flex space-x-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onArchive}
+              disabled={archivePending}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500"
+            >
+              {archivePending ? 'Archiving...' : 'Archive Board'}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onDelete}
+              disabled={deletePending}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500"
+            >
+              {deletePending ? 'Deleting...' : 'Delete Board'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { DragDropContext } from '@hello-pangea/dnd'
 import type { DropResult } from '@hello-pangea/dnd'
@@ -21,6 +21,7 @@ interface Board {
   description?: string
   background?: string
   column_theme?: string
+  archived: boolean
   user_id: number
   created_at: string
   updated_at: string
@@ -55,6 +56,7 @@ interface Item {
 
 export default function BoardPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const boardId = parseInt(id || '0')
 
   const boardState = useBoardState()
@@ -228,6 +230,28 @@ export default function BoardPage() {
     boardState.handleCloseSettings()
   }
 
+  const handleArchiveBoard = () => {
+    const message = board!.archived
+      ? 'Are you sure you want to unarchive this board? It will be visible on the dashboard.'
+      : 'Are you sure you want to archive this board? It will be hidden from the dashboard.'
+    if (window.confirm(message)) {
+      mutations.updateBoardMutation.mutate({
+        id: board!.id,
+        archived: !board!.archived,
+      })
+    }
+  }
+
+  const handleDeleteBoard = () => {
+    if (window.confirm('Are you sure you want to delete this board? This will permanently delete the board and all its columns and cards. This action cannot be undone.')) {
+      mutations.deleteBoardMutation.mutate(board!.id, {
+        onSuccess: () => {
+          navigate('/app/dashboard')
+        }
+      })
+    }
+  }
+
   const handleSaveColumn = () => {
     if (boardState.newColumnName.trim()) {
       if (boardState.isEditingColumn && boardState.editingColumnId) {
@@ -246,12 +270,14 @@ export default function BoardPage() {
     }
   }
 
+  const isDarkBackground = board.background && ['bg-blue-600', 'bg-green-600', 'bg-purple-600', 'bg-red-600'].includes(board.background)
+
   return (
     <PageLayout background={board.background || 'bg-gray-50'}>
       <div className="w-full h-full flex flex-col">
         <div className="px-6 py-4">
           <PageHeader title={board.name} background={board.background}>
-            <IconButton icon={CogIcon} onClick={handleOpenSettings} />
+            <IconButton icon={CogIcon} onClick={handleOpenSettings} className={isDarkBackground ? 'text-white' : 'text-black'} />
           </PageHeader>
         </div>
 
@@ -330,7 +356,11 @@ export default function BoardPage() {
         onThemeChange={boardState.setEditColumnTheme}
         onSave={handleSaveSettings}
         onClose={boardState.handleCloseSettings}
+        onArchive={handleArchiveBoard}
+        onDelete={handleDeleteBoard}
         savePending={mutations.updateBoardMutation.isPending}
+        archivePending={mutations.updateBoardMutation.isPending}
+        deletePending={mutations.deleteBoardMutation.isPending}
       />
 
       <AddColumnModal

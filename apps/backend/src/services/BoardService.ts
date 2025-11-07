@@ -1,5 +1,5 @@
 import { BoardModel } from '../models/Board';
-import type { Board, CreateBoardRequest, BoardWithColumns } from '../types';
+import type { Board, CreateBoardRequest, UpdateBoardRequest, BoardWithColumns } from '../types';
 
 export class BoardService {
   static async getAllBoards(userId: number = 1): Promise<Board[]> {
@@ -58,7 +58,7 @@ export class BoardService {
     }
   }
 
-  static async updateBoard(id: number, boardData: Partial<CreateBoardRequest>): Promise<Board> {
+  static async updateBoard(id: number, boardData: Partial<UpdateBoardRequest>): Promise<Board> {
     try {
       // Business logic validation
       this.validateUpdateBoardData(boardData);
@@ -110,7 +110,7 @@ export class BoardService {
     }
   }
 
-  private static validateUpdateBoardData(data: Partial<CreateBoardRequest>): void {
+  private static validateUpdateBoardData(data: Partial<UpdateBoardRequest>): void {
     if (data.name !== undefined) {
       if (typeof data.name !== 'string') {
         throw new Error('Validation error: Name must be a string');

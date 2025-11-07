@@ -13,7 +13,7 @@ export const boardsAPI = {
   getById: (id: number) => api.get(`/boards/${id}`),
   getWithColumns: (id: number) => api.get(`/boards/${id}/full`),
   create: (data: { name: string; description?: string; background?: string; column_theme?: string }) => api.post('/boards', data),
-  update: (id: number, data: { name?: string; description?: string; background?: string; column_theme?: string }) => api.put(`/boards/${id}`, data),
+  update: (id: number, data: { name?: string; description?: string; background?: string; column_theme?: string; archived?: boolean }) => api.put(`/boards/${id}`, data),
   delete: (id: number) => api.delete(`/boards/${id}`),
 }
 
