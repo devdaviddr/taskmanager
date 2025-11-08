@@ -98,7 +98,7 @@ export default function Card({ item, index, columnTheme, onClick }: CardProps) {
                   {getPrioritySymbol(item.priority)}
                 </span>
               )}
-              {item.effort !== undefined && (
+              {typeof item.effort === 'number' && item.effort > 0 && (
                 <span className="inline-block bg-green-500/20 text-green-700 text-xs px-1.5 py-0.5 rounded font-medium">
                   ⚡{item.effort}
                 </span>

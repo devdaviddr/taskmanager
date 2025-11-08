@@ -1,6 +1,8 @@
 erDiagram
     BOARDS ||--o{ COLUMNS : "has"
     COLUMNS ||--o{ ITEMS : "has"
+    ITEMS ||--o{ ITEM_TAGS : "has"
+    TAGS ||--o{ ITEM_TAGS : "belongs to"
 
     BOARDS {
         int id PK
@@ -29,12 +31,25 @@ erDiagram
         varchar(255) title
         text description
         int position
-        boolean archived
-        timestamp created_at
-        timestamp updated_at
         timestamp start_date
         timestamp end_date
         int effort
         text label
         varchar(10) priority
+        boolean archived
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    TAGS {
+        int id PK
+        varchar(50) name
+        varchar(7) color
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ITEM_TAGS {
+        int item_id FK
+        int tag_id FK
     }
