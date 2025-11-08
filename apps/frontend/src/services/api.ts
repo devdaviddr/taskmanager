@@ -69,6 +69,7 @@ export const getHealth = () => api.get('/health')
 // Users API
 export const usersAPI = {
   getAll: () => api.get('/users'),
+  update: (id: number, data: { name?: string; email?: string }) => api.put(`/users/${id}`, data),
 }
 
 // Boards API

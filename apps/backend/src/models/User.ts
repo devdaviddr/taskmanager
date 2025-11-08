@@ -1,6 +1,6 @@
 import { pool } from '../config/database';
 import bcrypt from 'bcryptjs';
-import type { User, CreateUserRequest } from '../types';
+import type { User, CreateUserRequest, UpdateUserRequest } from '../types';
 
 export class UserModel {
   static async findByEmail(email: string): Promise<User | null> {
@@ -42,5 +42,39 @@ export class UserModel {
 
   static async verifyPassword(user: User, password: string): Promise<boolean> {
     return await bcrypt.compare(password, user.password_hash);
+  }
+
+  static async update(id: number, userData: UpdateUserRequest): Promise<User | null> {
+    const fields = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (userData.name !== undefined) {
+      fields.push(`name = $${paramIndex}`);
+      values.push(userData.name);
+      paramIndex++;
+    }
+
+    if (userData.email !== undefined) {
+      fields.push(`email = $${paramIndex}`);
+      values.push(userData.email);
+      paramIndex++;
+    }
+
+    if (fields.length === 0) {
+      return null; // No fields to update
+    }
+
+    fields.push(`updated_at = NOW()`);
+    values.push(id);
+
+    const result = await pool.query(`
+      UPDATE users
+      SET ${fields.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING id, email, name, created_at, updated_at
+    `, values);
+
+    return result.rows[0] || null;
   }
 }

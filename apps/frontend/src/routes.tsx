@@ -7,7 +7,9 @@ import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import About from './pages/About'
 import Board from './pages/Board'
-import Settings from './pages/Settings'
+import SettingsLayout from './pages/Settings'
+import AccountSettings from './pages/AccountSettings'
+import PreferencesSettings from './pages/PreferencesSettings'
 
 export const AppRoutes = () => (
   <AuthProvider>
@@ -24,7 +26,10 @@ export const AppRoutes = () => (
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="about" element={<About />} />
         <Route path="board/:id" element={<Board />} />
-        <Route path="settings" element={<Settings />} />
+        <Route path="settings" element={<SettingsLayout />}>
+          <Route index element={<AccountSettings />} />
+          <Route path="preferences" element={<PreferencesSettings />} />
+        </Route>
       </Route>
     </Routes>
   </AuthProvider>
