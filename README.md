@@ -5,7 +5,7 @@ A modern, full-stack task management application built with React, TypeScript, N
 ## 🚀 Features
 
 ### Core Functionality
-- **User Authentication**: Microsoft-style login/signup with secure session management
+- **JWT Authentication**: Secure login/signup with HttpOnly cookies and automatic token refresh
 - **Dashboard**: Overview of all user boards with quick access and statistics
 - **Kanban Boards**: Drag-and-drop interface for organizing tasks into columns
 - **Board Management**: Create and manage multiple project boards with customizable settings
@@ -149,7 +149,50 @@ http://localhost:3001
 ```
 
 ### Authentication
-Currently uses session-based authentication (to be enhanced with JWT).
+Uses JWT-based authentication with HttpOnly cookies for security. Features automatic token refresh and secure logout with token blacklisting.
+
+#### Authentication Endpoints
+
+**Register User**
+```http
+POST /auth/register
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "securepassword",
+  "name": "John Doe"
+}
+```
+
+**Login User**
+```http
+POST /auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "securepassword"
+}
+```
+
+**Get Current User**
+```http
+GET /auth/me
+Authorization: Bearer <token> (via HttpOnly cookie)
+```
+
+**Refresh Token**
+```http
+POST /auth/refresh
+Authorization: Bearer <refresh_token> (via HttpOnly cookie)
+```
+
+**Logout User**
+```http
+POST /auth/logout
+Authorization: Bearer <token> (via HttpOnly cookie)
+```
 
 ### Endpoints
 
@@ -317,9 +360,42 @@ Standard responses include success/error status, data, and timestamps. Refer to 
 
 ## 🗄 Database Schema
 
-The application uses PostgreSQL with a normalized schema supporting boards, columns, items (cards), and tags. See `erd.mermaid` for the entity-relationship diagram.
+The application uses PostgreSQL with a normalized schema supporting user authentication, boards, columns, items (cards), and tags. See `erd.mermaid` for the entity-relationship diagram and `auth-flow.mermaid` for the authentication flow diagram.
 
 ### Key Tables
+
+#### Users
+```sql
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  name VARCHAR(255),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+#### Refresh Tokens
+```sql
+CREATE TABLE refresh_tokens (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash VARCHAR(64) NOT NULL UNIQUE,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+#### Invalidated Tokens
+```sql
+CREATE TABLE invalidated_tokens (
+  id SERIAL PRIMARY KEY,
+  token_hash VARCHAR(64) NOT NULL UNIQUE,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
 
 #### Boards
 ```sql

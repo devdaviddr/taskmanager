@@ -1,6 +1,7 @@
 erDiagram
     USERS ||--o{ BOARDS : "owns"
     USERS ||--o{ ITEM_USERS : "assigned to"
+    USERS ||--o{ REFRESH_TOKENS : "has"
     BOARDS ||--o{ COLUMNS : "has"
     BOARDS ||--o{ BOARD_USERS : "has members"
     COLUMNS ||--o{ ITEMS : "has"
@@ -15,6 +16,21 @@ erDiagram
         varchar(255) name
         timestamp created_at
         timestamp updated_at
+    }
+
+    REFRESH_TOKENS {
+        int id PK
+        int user_id FK
+        varchar(64) token_hash UK
+        timestamp expires_at
+        timestamp created_at
+    }
+
+    INVALIDATED_TOKENS {
+        int id PK
+        varchar(64) token_hash UK
+        timestamp expires_at
+        timestamp created_at
     }
 
     BOARDS {
