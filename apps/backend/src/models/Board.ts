@@ -83,12 +83,12 @@ export class BoardModel {
     };
   }
 
-  static async create(boardData: CreateBoardRequest): Promise<Board> {
+  static async create(boardData: CreateBoardRequest, userId: number): Promise<Board> {
     const result = await pool.query(`
       INSERT INTO boards (name, description, background, column_theme, archived, user_id, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, 1, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
       RETURNING id, name, description, background, column_theme, archived, user_id, created_at, updated_at
-    `, [boardData.name, boardData.description || null, boardData.background || 'bg-gray-50', boardData.column_theme || 'dark', boardData.archived || false]);
+    `, [boardData.name, boardData.description || null, boardData.background || 'bg-gray-50', boardData.column_theme || 'dark', boardData.archived || false, userId]);
     return result.rows[0];
   }
 

@@ -13,6 +13,19 @@ CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed);
 -- Create index on created_at for ordering
 CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at DESC);
 
+-- Create users table
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  name VARCHAR(255),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index on email for faster lookups
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
 -- Create boards table
 CREATE TABLE IF NOT EXISTS boards (
   id SERIAL PRIMARY KEY,
@@ -21,7 +34,7 @@ CREATE TABLE IF NOT EXISTS boards (
   background VARCHAR(255) DEFAULT 'bg-gray-50',
   column_theme VARCHAR(255) DEFAULT 'dark',
   archived BOOLEAN NOT NULL DEFAULT FALSE,
-  user_id INTEGER NOT NULL DEFAULT 1, -- Default user for now
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

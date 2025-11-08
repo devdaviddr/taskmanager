@@ -1,8 +1,24 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 
 export default function Sidebar() {
+  const { user, logout } = useAuth()
   const [isCollapsed, setIsCollapsed] = useState(false)
+
+  const handleLogout = () => {
+    logout()
+  }
+
+  const getInitials = (name?: string, email?: string) => {
+    if (name) {
+      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    }
+    if (email) {
+      return email[0].toUpperCase()
+    }
+    return 'U'
+  }
 
   return (
     <div className={`bg-white text-gray-900 border-r border-gray-200 transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} h-full flex flex-col`}>
@@ -12,9 +28,12 @@ export default function Sidebar() {
           <div className="p-4 flex items-center justify-between min-h-[60px]">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                JD
+                {getInitials(user?.name, user?.email)}
               </div>
-              <span className="ml-3 text-sm font-medium truncate">John Doe</span>
+              <div className="ml-3 min-w-0 flex-1">
+                <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
+                <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+              </div>
             </div>
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
@@ -83,7 +102,7 @@ export default function Sidebar() {
       {/* Footer */}
       <div className="mt-auto p-4 border-t border-gray-200">
         <button
-          onClick={() => window.location.href = '/'}
+          onClick={handleLogout}
           className="w-full flex items-center p-2 rounded-md hover:bg-red-50 hover:text-red-700 transition-colors duration-200 text-gray-600"
         >
           <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
