@@ -6,6 +6,7 @@ import itemRoutes from './items';
 import tagRoutes from './tags';
 import authRoutes from './auth';
 import userRoutes from './users';
+import adminRoutes from './admin';
 
 const router = new Hono();
 
@@ -32,6 +33,7 @@ router.get('/health', async (c) => {
 
 // Mount routes
 router.route('/auth', authRoutes);
+router.route('/admin', adminRoutes);
 router.route('/', userRoutes);
 router.route('/', taskRoutes);
 router.route('/', boardRoutes);

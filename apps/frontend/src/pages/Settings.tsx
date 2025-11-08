@@ -1,14 +1,22 @@
 import { Outlet, useLocation, Link } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 import PageHeader from '../components/PageHeader'
+import { useAuth } from '../hooks/useAuth'
 
 const SettingsLayout = () => {
   const location = useLocation()
+  const { user } = useAuth()
 
-  const tabs = [
+  const baseTabs = [
     { name: 'Account', href: '/app/settings', current: location.pathname === '/app/settings' },
     { name: 'Preferences', href: '/app/settings/preferences', current: location.pathname === '/app/settings/preferences' },
   ]
+
+  const adminTabs = [
+    { name: 'System Users', href: '/app/settings/system-users', current: location.pathname === '/app/settings/system-users' },
+  ]
+
+  const tabs = user && (user.role === 'admin' || user.role === 'superadmin') ? [...baseTabs, ...adminTabs] : baseTabs
 
   return (
     <PageLayout>

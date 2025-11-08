@@ -5,7 +5,7 @@ import type { User, CreateUserRequest, UpdateUserRequest } from '../types';
 export class UserModel {
   static async findByEmail(email: string): Promise<User | null> {
     const result = await pool.query(`
-      SELECT id, email, password_hash, name, created_at, updated_at
+      SELECT id, email, password_hash, name, role, created_at, updated_at
       FROM users
       WHERE email = $1
     `, [email]);
@@ -14,7 +14,7 @@ export class UserModel {
 
   static async findById(id: number): Promise<User | null> {
     const result = await pool.query(`
-      SELECT id, email, password_hash, name, created_at, updated_at
+      SELECT id, email, password_hash, name, role, created_at, updated_at
       FROM users
       WHERE id = $1
     `, [id]);
@@ -24,16 +24,16 @@ export class UserModel {
   static async create(userData: CreateUserRequest): Promise<User> {
     const hashedPassword = await bcrypt.hash(userData.password, 12);
     const result = await pool.query(`
-      INSERT INTO users (email, password_hash, name, created_at, updated_at)
-      VALUES ($1, $2, $3, NOW(), NOW())
-      RETURNING id, email, password_hash, name, created_at, updated_at
+      INSERT INTO users (email, password_hash, name, role, created_at, updated_at)
+      VALUES ($1, $2, $3, 'user', NOW(), NOW())
+      RETURNING id, email, password_hash, name, role, created_at, updated_at
     `, [userData.email, hashedPassword, userData.name || null]);
     return result.rows[0];
   }
 
   static async findAll(): Promise<User[]> {
     const result = await pool.query(`
-      SELECT id, email, name, created_at, updated_at
+      SELECT id, email, name, role, created_at, updated_at
       FROM users
       ORDER BY name, email
     `);
@@ -61,6 +61,12 @@ export class UserModel {
       paramIndex++;
     }
 
+    if (userData.role !== undefined) {
+      fields.push(`role = $${paramIndex}`);
+      values.push(userData.role);
+      paramIndex++;
+    }
+
     if (fields.length === 0) {
       return null; // No fields to update
     }
@@ -72,7 +78,7 @@ export class UserModel {
       UPDATE users
       SET ${fields.join(', ')}
       WHERE id = $${paramIndex}
-      RETURNING id, email, name, created_at, updated_at
+      RETURNING id, email, name, role, created_at, updated_at
     `, values);
 
     return result.rows[0] || null;

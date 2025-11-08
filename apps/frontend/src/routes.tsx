@@ -10,6 +10,7 @@ import Board from './pages/Board'
 import SettingsLayout from './pages/Settings'
 import AccountSettings from './pages/AccountSettings'
 import PreferencesSettings from './pages/PreferencesSettings'
+import SystemUsers from './pages/SystemUsers'
 
 export const AppRoutes = () => (
   <AuthProvider>
@@ -29,6 +30,7 @@ export const AppRoutes = () => (
         <Route path="settings" element={<SettingsLayout />}>
           <Route index element={<AccountSettings />} />
           <Route path="preferences" element={<PreferencesSettings />} />
+          <Route path="system-users" element={<SystemUsers />} />
         </Route>
       </Route>
     </Routes>

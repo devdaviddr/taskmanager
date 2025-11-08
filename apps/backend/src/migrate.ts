@@ -1,4 +1,10 @@
 import { pool } from './config/database';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+
+console.log('DATABASE_URL:', process.env.DATABASE_URL);
 
 async function runMigrations() {
   try {
@@ -11,9 +17,16 @@ async function runMigrations() {
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         name VARCHAR(255),
+        role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'superadmin')),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
+    `);
+
+    // Add role column to existing users table if it doesn't exist
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'superadmin'));
     `);
 
     // Create index on email

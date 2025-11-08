@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import type { AxiosRequestConfig } from 'axios';
 import api, { setRefreshTokenFunction } from '../services/api';
@@ -7,6 +7,7 @@ interface User {
   id: number;
   email: string;
   name?: string;
+  role: 'user' | 'admin' | 'superadmin';
 }
 
 interface AuthContextType {
@@ -105,7 +106,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const refreshToken = async (): Promise<void> => {
+  const refreshToken = useCallback(async (): Promise<void> => {
     if (refreshPromiseRef.current) {
       // If refresh is already in progress, wait for it
       return refreshPromiseRef.current;
@@ -139,7 +140,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     })();
 
     return refreshPromiseRef.current;
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const processQueue = () => {
     const queue = requestQueueRef.current;
@@ -150,7 +152,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
   };
 
-  const scheduleRefresh = () => {
+  const scheduleRefresh = useCallback(() => {
     clearRefreshTimer();
     if (tokenExpiryRef.current) {
       // Schedule refresh 5 minutes before expiry
@@ -161,7 +163,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }, refreshTime);
       }
     }
-  };
+  }, [refreshToken]);
 
   const clearRefreshTimer = () => {
     if (refreshTimerRef.current) {
@@ -173,7 +175,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Set the refresh function for the API service
   useEffect(() => {
     setRefreshTokenFunction(refreshToken);
-  }, []);
+  }, [refreshToken]);
 
   const value: AuthContextType = {
     user,

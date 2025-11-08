@@ -1,0 +1,15 @@
+
+> dev
+> tsx watch src/index.ts
+
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+✅ Successfully connected to PostgreSQL
+🚀 Server is running on http://localhost:3001
+📚 API Documentation available at http://localhost:3001
+POST /auth/register - 238ms
+GET /admin/users - 0ms
+POST /auth/login - 221ms
+9:12:15 am [tsx] change in ./src/config/database.ts Restarting...
+9:12:20 am [tsx] Process didn't exit in 5s. Force killing...
+9:12:47 am [tsx] change in ./src/models/User.ts Process hasn't exited. Killing process...
+9:30:27 am [tsx] change in ./src/routes/admin.ts Process hasn't exited. Killing process...

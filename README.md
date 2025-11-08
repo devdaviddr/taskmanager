@@ -151,6 +151,22 @@ http://localhost:3001
 ### Authentication
 Uses JWT-based authentication with HttpOnly cookies for security. Features automatic token refresh and secure logout with token blacklisting.
 
+### User Roles & Permissions
+The application implements a hierarchical role-based access control system:
+
+- **User**: Default role for all registered users. Can create and manage their own boards and tasks.
+- **Admin**: Can manage users within the system. Has access to user management features and can modify user roles (except superadmin).
+- **Superadmin**: Full system access. Can promote/demote any user to any role including superadmin.
+
+Role hierarchy: `user` < `admin` < `superadmin`
+
+#### Role-Based Features
+- **Settings > Administration**: Admin and superadmin users can access user management interface
+- **User Role Management**: Admins can view all users and modify roles (with restrictions)
+- **API Endpoints**: Admin-only endpoints for user management operations
+
+**Note**: Board-specific roles (owner, member) are separate from global user roles and control access within individual boards.
+
 #### Authentication Endpoints
 
 **Register User**
@@ -355,6 +371,25 @@ Content-Type: application/json
 DELETE /tags/:id
 ```
 
+#### Admin API (Admin/Superadmin Only)
+
+**Get All Users**
+```http
+GET /admin/users
+Authorization: Required (Admin+)
+```
+
+**Update User Role**
+```http
+PUT /admin/users/:id/role
+Authorization: Required (Admin+)
+Content-Type: application/json
+
+{
+  "role": "admin"
+}
+```
+
 ### Response Format
 Standard responses include success/error status, data, and timestamps. Refer to backend route handlers for detailed schemas.
 
@@ -371,6 +406,7 @@ CREATE TABLE users (
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   name VARCHAR(255),
+  role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'superadmin')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

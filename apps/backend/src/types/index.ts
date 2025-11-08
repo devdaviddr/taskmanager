@@ -30,6 +30,7 @@ export interface User {
   email: string;
   password_hash: string;
   name?: string;
+  role: 'user' | 'admin' | 'superadmin';
   created_at: Date;
   updated_at: Date;
 }
@@ -43,6 +44,7 @@ export interface CreateUserRequest {
 export interface UpdateUserRequest {
   name?: string;
   email?: string;
+  role?: 'user' | 'admin' | 'superadmin';
 }
 
 export interface LoginRequest {

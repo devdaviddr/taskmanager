@@ -79,6 +79,21 @@ export default function AccountSettings() {
                 {user?.id || 'N/A'}
               </div>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Role
+              </label>
+              <div className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-500 sm:text-sm">
+                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                  user?.role === 'user' ? 'bg-green-100 text-green-800' :
+                  user?.role === 'admin' ? 'bg-yellow-100 text-yellow-800' :
+                  user?.role === 'superadmin' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'N/A'}
+                </span>
+              </div>
+            </div>
             <div className="pt-4 flex space-x-4">
               <button
                 type="submit"

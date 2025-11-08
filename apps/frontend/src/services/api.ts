@@ -105,6 +105,12 @@ export const usersAPI = {
   update: (id: number, data: { name?: string; email?: string }) => api.put(`/users/${id}`, data),
 }
 
+// Admin API
+export const adminAPI = {
+  getAllUsers: () => api.get('/admin/users'),
+  updateUserDetails: (id: number, data: { role?: 'user' | 'admin' | 'superadmin'; name?: string; email?: string }) => api.put(`/admin/users/${id}`, data),
+}
+
 // Boards API
 export const boardsAPI = {
   getAll: () => api.get('/boards'),

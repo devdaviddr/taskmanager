@@ -15,3 +15,5 @@ export const logger: MiddlewareHandler = async (c, next) => {
   const end = Date.now();
   console.log(`${c.req.method} ${c.req.path} - ${end - start}ms`);
 };
+
+export { requireRole, requireAdmin, requireSuperadmin } from './roleAuth';
