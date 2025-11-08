@@ -58,15 +58,19 @@ async function runMigrations() {
       );
     `);
 
-    // Create indexes
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tags_created_at ON tags(created_at DESC);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_item_tags_item_id ON item_tags(item_id);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_item_tags_tag_id ON item_tags(tag_id);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_item_users_item_id ON item_users(item_id);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_item_users_user_id ON item_users(user_id);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_board_users_board_id ON board_users(board_id);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_board_users_user_id ON board_users(user_id);`);
+    // Create invalidated_tokens table for token blacklisting
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS invalidated_tokens (
+        id SERIAL PRIMARY KEY,
+        token_hash VARCHAR(128) NOT NULL UNIQUE,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `);
+
+    // Create indexes for invalidated_tokens
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_invalidated_tokens_hash ON invalidated_tokens(token_hash);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_invalidated_tokens_expires_at ON invalidated_tokens(expires_at);`);
 
     console.log('✅ Migrations completed successfully');
   } catch (error) {

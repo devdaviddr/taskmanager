@@ -5,6 +5,7 @@ import { serve } from '@hono/node-server';
 import { testConnection } from './config/database';
 import routes from './routes';
 import { errorHandler, logger } from './middleware';
+import { AuthService } from './services/AuthService';
 
 const app = new Hono();
 
@@ -34,6 +35,15 @@ async function startServer() {
     console.log(`🚀 Server is running on http://localhost:${info.port}`);
     console.log(`📚 API Documentation available at http://localhost:${info.port}`);
   });
+
+  // Start token cleanup interval (run every hour)
+  setInterval(async () => {
+    try {
+      await AuthService.cleanupExpiredTokens();
+    } catch (error) {
+      console.error('Error during token cleanup:', error);
+    }
+  }, 60 * 60 * 1000); // 1 hour
 }
 
 startServer();

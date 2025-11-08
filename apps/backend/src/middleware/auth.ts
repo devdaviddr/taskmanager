@@ -9,6 +9,13 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
   }
 
   const token = authHeader.substring(7);
+
+  // Check if token is blacklisted
+  const isBlacklisted = await AuthService.isTokenBlacklisted(token);
+  if (isBlacklisted) {
+    return c.json({ error: 'Token has been invalidated' }, 401);
+  }
+
   const user = await AuthService.getUserFromToken(token);
 
   if (!user) {

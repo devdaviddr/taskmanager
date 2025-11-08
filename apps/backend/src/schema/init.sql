@@ -115,11 +115,15 @@ CREATE INDEX IF NOT EXISTS idx_item_users_user_id ON item_users(user_id);
 CREATE INDEX IF NOT EXISTS idx_board_users_board_id ON board_users(board_id);
 CREATE INDEX IF NOT EXISTS idx_board_users_user_id ON board_users(user_id);
 
--- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_boards_user_id ON boards(user_id);
-CREATE INDEX IF NOT EXISTS idx_boards_created_at ON boards(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_boards_archived ON boards(archived);
-CREATE INDEX IF NOT EXISTS idx_columns_board_id ON columns(board_id);
-CREATE INDEX IF NOT EXISTS idx_columns_position ON columns(board_id, position);
-CREATE INDEX IF NOT EXISTS idx_items_column_id ON items(column_id);
-CREATE INDEX IF NOT EXISTS idx_items_position ON items(column_id, position);
+-- Create invalidated_tokens table for token blacklisting
+CREATE TABLE IF NOT EXISTS invalidated_tokens (
+  id SERIAL PRIMARY KEY,
+  token_hash VARCHAR(128) NOT NULL UNIQUE,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index on token_hash for fast lookups
+CREATE INDEX IF NOT EXISTS idx_invalidated_tokens_hash ON invalidated_tokens(token_hash);
+-- Create index on expires_at for cleanup
+CREATE INDEX IF NOT EXISTS idx_invalidated_tokens_expires_at ON invalidated_tokens(expires_at);

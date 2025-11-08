@@ -52,6 +52,13 @@ authRoutes.get('/me', async (c) => {
   }
 
   const token = authHeader.substring(7);
+
+  // Check if token is blacklisted
+  const isBlacklisted = await AuthService.isTokenBlacklisted(token);
+  if (isBlacklisted) {
+    return c.json({ error: 'Token has been invalidated' }, 401);
+  }
+
   const user = await AuthService.getUserFromToken(token);
   if (!user) {
     return c.json({ error: 'Invalid token' }, 401);
@@ -59,6 +66,20 @@ authRoutes.get('/me', async (c) => {
 
   const { password_hash, ...userWithoutPassword } = user;
   return c.json({ user: userWithoutPassword });
+});
+
+authRoutes.post('/logout', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const token = authHeader.substring(7);
+  
+  // Blacklist the token
+  await AuthService.blacklistToken(token);
+  
+  return c.json({ message: 'Logged out successfully' });
 });
 
 export default authRoutes;
