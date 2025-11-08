@@ -104,3 +104,6 @@ temp/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Project specific
+AGENTS.md

@@ -7,8 +7,13 @@ A modern, full-stack task management application built with React, TypeScript, N
 ### Core Functionality
 - **User Authentication**: Microsoft-style login/signup with secure session management
 - **Dashboard**: Overview of all user boards with quick access and statistics
-- **Board Management**: Create and manage multiple project boards
-- **Task Management**: Add, edit, delete, and organize tasks within boards
+- **Kanban Boards**: Drag-and-drop interface for organizing tasks into columns
+- **Board Management**: Create and manage multiple project boards with customizable settings
+- **Column Management**: Add, reorder, and organize columns within boards
+- **Card Management**: Create, edit, and organize task cards with rich metadata
+- **Tag System**: Color-coded tags for categorizing and filtering cards
+- **Advanced Card Features**: Effort estimation (1-10), priority levels (high/medium/low), due dates, custom labels
+- **Board Settings**: Comprehensive settings panel with tabs for general config, tag management, and danger zone actions
 - **Settings**: User preferences and account management
 
 ### Technical Features
@@ -68,7 +73,6 @@ taskmanager/
 │       ├── Dockerfile
 │       └── package.json
 ├── docker-compose.yml      # Docker orchestration
-├── AGENTS.md              # AI agent configuration
 └── package.json           # Root package.json
 ```
 
@@ -163,74 +167,229 @@ Response:
 }
 ```
 
-#### Tasks API
+#### Boards API
 
-**Get All Tasks**
+**Get All Boards**
 ```http
-GET /tasks
+GET /boards
 ```
 
-**Get Task by ID**
+**Get Board by ID**
 ```http
-GET /tasks/:id
+GET /boards/:id
 ```
 
-**Create Task**
+**Create Board**
 ```http
-POST /tasks
+POST /boards
 Content-Type: application/json
 
 {
-  "title": "Complete project",
-  "description": "Finish the task manager project"
+  "name": "Project Alpha",
+  "description": "Main project board"
 }
 ```
 
-**Update Task**
+**Update Board**
 ```http
-PUT /tasks/:id
+PUT /boards/:id
 Content-Type: application/json
 
 {
-  "title": "Updated title",
+  "name": "Updated Project",
+  "background": "bg-blue-50"
+}
+```
+
+**Delete Board**
+```http
+DELETE /boards/:id
+```
+
+#### Columns API
+
+**Get Columns for Board**
+```http
+GET /boards/:boardId/columns
+```
+
+**Create Column**
+```http
+POST /columns
+Content-Type: application/json
+
+{
+  "board_id": 1,
+  "name": "To Do",
+  "position": 0
+}
+```
+
+**Update Column**
+```http
+PUT /columns/:id
+Content-Type: application/json
+
+{
+  "name": "In Progress",
+  "position": 1
+}
+```
+
+**Delete Column**
+```http
+DELETE /columns/:id
+```
+
+#### Items API (Cards)
+
+**Get Items for Column**
+```http
+GET /columns/:columnId/items
+```
+
+**Create Item**
+```http
+POST /items
+Content-Type: application/json
+
+{
+  "column_id": 1,
+  "title": "Implement login",
+  "description": "Add user authentication",
+  "effort": 5,
+  "priority": "high"
+}
+```
+
+**Update Item**
+```http
+PUT /items/:id
+Content-Type: application/json
+
+{
+  "title": "Updated task",
   "completed": true
 }
 ```
 
-**Delete Task**
+**Delete Item**
 ```http
-DELETE /tasks/:id
+DELETE /items/:id
 ```
 
-### Response Format
-```json
+#### Tags API
+
+**Get All Tags**
+```http
+GET /tags
+```
+
+**Create Tag**
+```http
+POST /tags
+Content-Type: application/json
+
 {
-  "id": 1,
-  "title": "Task Title",
-  "description": "Task description",
-  "completed": false,
-  "created_at": "2025-11-03T09:15:33.998Z",
-  "updated_at": "2025-11-03T09:15:33.998Z"
+  "name": "Bug",
+  "color": "#EF4444"
 }
 ```
 
+**Update Tag**
+```http
+PUT /tags/:id
+Content-Type: application/json
+
+{
+  "name": "Feature",
+  "color": "#10B981"
+}
+```
+
+**Delete Tag**
+```http
+DELETE /tags/:id
+```
+
+### Response Format
+Standard responses include success/error status, data, and timestamps. Refer to backend route handlers for detailed schemas.
+
 ## 🗄 Database Schema
 
-### Tasks Table
+The application uses PostgreSQL with a normalized schema supporting boards, columns, items (cards), and tags. See `erd.mermaid` for the entity-relationship diagram.
+
+### Key Tables
+
+#### Boards
 ```sql
-CREATE TABLE tasks (
+CREATE TABLE boards (
   id SERIAL PRIMARY KEY,
-  title VARCHAR(255) NOT NULL,
+  name VARCHAR(255) NOT NULL,
   description TEXT,
-  completed BOOLEAN NOT NULL DEFAULT FALSE,
+  background VARCHAR(255) DEFAULT 'bg-gray-50',
+  column_theme VARCHAR(255) DEFAULT 'dark',
+  archived BOOLEAN NOT NULL DEFAULT FALSE,
+  user_id INTEGER NOT NULL DEFAULT 1,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
--- Indexes for performance
-CREATE INDEX idx_tasks_completed ON tasks(completed);
-CREATE INDEX idx_tasks_created_at ON tasks(created_at DESC);
 ```
+
+#### Columns
+```sql
+CREATE TABLE columns (
+  id SERIAL PRIMARY KEY,
+  board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(board_id, name)
+);
+```
+
+#### Items (Cards)
+```sql
+CREATE TABLE items (
+  id SERIAL PRIMARY KEY,
+  column_id INTEGER NOT NULL REFERENCES columns(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  position INTEGER NOT NULL DEFAULT 0,
+  start_date TIMESTAMP WITH TIME ZONE,
+  end_date TIMESTAMP WITH TIME ZONE,
+  effort INTEGER CHECK (effort >= 0 AND effort <= 10),
+  label TEXT,
+  priority VARCHAR(10) CHECK (priority IN ('high', 'medium', 'low')),
+  archived BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+#### Tags
+```sql
+CREATE TABLE tags (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(50) NOT NULL UNIQUE,
+  color VARCHAR(7) DEFAULT '#3B82F6',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+#### Item Tags (Junction)
+```sql
+CREATE TABLE item_tags (
+  item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (item_id, tag_id)
+);
+```
+
+### Indexes
+Comprehensive indexing for performance: user_id, board_id, column_id, positions, timestamps, and tag relationships.
 
 ## 🔧 Development
 
@@ -361,7 +520,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 For questions or issues:
 - Create an issue on GitHub
 - Check the documentation in `/docs`
-- Review the AGENTS.md for AI-assisted development
 
 ---
 
