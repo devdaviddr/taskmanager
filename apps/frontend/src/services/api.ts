@@ -49,20 +49,110 @@ api.interceptors.request.use(
 );
 
 // Response interceptor to handle 401 errors and token refresh
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: unknown) => void;
+  reject: (error?: unknown) => void;
+}> = [];
+
+const processQueue = (error: Error | null, token: string | null = null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(token);
+    }
+  });
+
+  failedQueue = [];
+};
+
+// Global refresh tracking
+declare global {
+  var lastRefreshTime: number;
+}
+
+const REFRESH_INTERVAL = 45 * 60 * 1000; // 45 minutes in milliseconds
+
+if (typeof window !== 'undefined') {
+  if (!window.lastRefreshTime) {
+    window.lastRefreshTime = 0;
+  }
+}
+
+const shouldRefreshProactively = () => {
+  if (typeof window === 'undefined') return false;
+  return Date.now() - window.lastRefreshTime > REFRESH_INTERVAL;
+};
+
+const refreshTokenIfNeeded = async () => {
+  if (shouldRefreshProactively()) {
+    try {
+      await api.post('/auth/refresh');
+      if (typeof window !== 'undefined') {
+        window.lastRefreshTime = Date.now();
+      }
+    } catch (error) {
+      // If proactive refresh fails, we'll handle it reactively on 401
+      console.warn('Proactive token refresh failed:', error);
+    }
+  }
+};
+
+// Request interceptor to proactively refresh tokens
+api.interceptors.request.use(
+  async (config) => {
+    // Check if we should refresh proactively before making requests
+    await refreshTokenIfNeeded();
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      // Try to refresh the token
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // If refresh is already in progress, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(() => {
+          return api(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
       try {
+        // Try to refresh the token
         await api.post('/auth/refresh');
+        lastRefreshTime = Date.now();
+        
+        // Refresh succeeded, process queued requests
+        processQueue(null);
+        
         // Retry the original request
-        return api(error.config);
-      } catch {
-        // Refresh failed, redirect to login
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed, process queue with error and redirect
+        processQueue(refreshError as Error, null);
+        
+        // Clear any auth state and redirect to login
         window.location.href = '/login';
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
+
     return Promise.reject(error);
   }
 );

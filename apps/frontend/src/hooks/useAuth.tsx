@@ -44,6 +44,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await api.get('/auth/me');
       setUser(response.data.user);
+      // Reset refresh timer on successful auth check
+      if (typeof window !== 'undefined') {
+        window.lastRefreshTime = Date.now();
+      }
     } catch {
       setUser(null);
     }
@@ -53,11 +57,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     const response = await api.post('/auth/login', { email, password });
     setUser(response.data.user);
+    // Set refresh timer on login
+    if (typeof window !== 'undefined') {
+      window.lastRefreshTime = Date.now();
+    }
   };
 
   const register = async (email: string, password: string, name?: string) => {
     const response = await api.post('/auth/register', { email, password, name });
     setUser(response.data.user);
+    // Set refresh timer on register
+    if (typeof window !== 'undefined') {
+      window.lastRefreshTime = Date.now();
+    }
   };
 
   const logout = async () => {
