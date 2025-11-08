@@ -316,7 +316,7 @@ export default function BoardPage() {
       mutations.createTagMutation.mutate({ name: boardState.newTagName.trim(), color: boardState.newTagColor }, {
         onSuccess: () => {
           boardState.setNewTagName('')
-          boardState.setNewTagColor('gray')
+          boardState.setNewTagColor('#F3F4F6')
         }
       })
     }
@@ -331,20 +331,20 @@ export default function BoardPage() {
   const handleSaveEditTag = () => {
     if (boardState.editingTagId && boardState.editTagName.trim()) {
       mutations.updateTagMutation.mutate({ id: boardState.editingTagId, name: boardState.editTagName.trim(), color: boardState.editTagColor }, {
-        onSuccess: () => {
-          boardState.setEditingTagId(null)
-          boardState.setEditTagName('')
-          boardState.setEditTagColor('gray')
-        }
+      onSuccess: () => {
+        boardState.setEditingTagId(null)
+        boardState.setEditTagName('')
+        boardState.setEditTagColor('#F3F4F6')
+      }
       })
     }
   }
 
-  const handleCancelEditTag = () => {
-    boardState.setEditingTagId(null)
-    boardState.setEditTagName('')
-    boardState.setEditTagColor('gray')
-  }
+const handleCancelEditTag = () => {
+  boardState.setEditingTagId(null)
+  boardState.setEditTagName('')
+  boardState.setEditTagColor('#F3F4F6')
+}
 
   const handleDeleteTag = (id: number) => {
     if (window.confirm('Are you sure you want to delete this tag? This will remove it from all cards.')) {

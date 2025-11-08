@@ -181,7 +181,7 @@ export default function BoardSettingsModal({
               <div className="space-y-2">
                 {tags.map((tag) => (
                   <div key={tag.id} className="flex items-center space-x-2">
-                    <div className={`w-4 h-4 rounded-full bg-${tag.color}-600`}></div>
+                    <div className="w-4 h-4 rounded-full" style={{backgroundColor: tag.color}}></div>
                     {editingTagId === tag.id ? (
                       <>
                         <Input
@@ -193,11 +193,11 @@ export default function BoardSettingsModal({
                           value={editTagColor}
                           onChange={(e) => onEditTagColorChange(e.target.value)}
                         >
-                          <option value="gray">Light Gray</option>
-                          <option value="blue">Blue</option>
-                          <option value="green">Green</option>
-                          <option value="purple">Purple</option>
-                          <option value="red">Red</option>
+                          <option value="#F3F4F6">Light Gray</option>
+                          <option value="#2563EB">Blue</option>
+                          <option value="#16A34A">Green</option>
+                          <option value="#9333EA">Purple</option>
+                          <option value="#DC2626">Red</option>
                         </Select>
                         <Button
                           variant="primary"
@@ -245,11 +245,11 @@ export default function BoardSettingsModal({
                   value={newTagColor}
                   onChange={(e) => onNewTagColorChange(e.target.value)}
                 >
-                  <option value="gray">Light Gray</option>
-                  <option value="blue">Blue</option>
-                  <option value="green">Green</option>
-                  <option value="purple">Purple</option>
-                  <option value="red">Red</option>
+                  <option value="#F3F4F6">Light Gray</option>
+                  <option value="#2563EB">Blue</option>
+                  <option value="#16A34A">Green</option>
+                  <option value="#9333EA">Purple</option>
+                  <option value="#DC2626">Red</option>
                 </Select>
                 <Button
                   variant="primary"

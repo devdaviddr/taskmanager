@@ -48,7 +48,7 @@ export function useBoardState() {
   const [editingColumnId, setEditingColumnId] = useState<number | null>(null)
 
   const [newTagName, setNewTagName] = useState('')
-  const [newTagColor, setNewTagColor] = useState('gray')
+  const [newTagColor, setNewTagColor] = useState('#F3F4F6')
   const [editingTagId, setEditingTagId] = useState<number | null>(null)
   const [editTagName, setEditTagName] = useState('')
   const [editTagColor, setEditTagColor] = useState('gray')
