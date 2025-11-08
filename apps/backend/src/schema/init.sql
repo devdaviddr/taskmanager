@@ -84,6 +84,21 @@ CREATE TABLE IF NOT EXISTS item_tags (
   PRIMARY KEY (item_id, tag_id)
 );
 
+-- Create item_users junction table for many-to-many relationship
+CREATE TABLE IF NOT EXISTS item_users (
+  item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (item_id, user_id)
+);
+
+-- Create board_users junction table for board members
+CREATE TABLE IF NOT EXISTS board_users (
+  board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role VARCHAR(20) DEFAULT 'member', -- owner, member, etc.
+  PRIMARY KEY (board_id, user_id)
+);
+
 -- Indexes for tags table
 CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
 CREATE INDEX IF NOT EXISTS idx_tags_created_at ON tags(created_at DESC);
@@ -91,6 +106,14 @@ CREATE INDEX IF NOT EXISTS idx_tags_created_at ON tags(created_at DESC);
 -- Indexes for item_tags junction table
 CREATE INDEX IF NOT EXISTS idx_item_tags_item_id ON item_tags(item_id);
 CREATE INDEX IF NOT EXISTS idx_item_tags_tag_id ON item_tags(tag_id);
+
+-- Indexes for item_users junction table
+CREATE INDEX IF NOT EXISTS idx_item_users_item_id ON item_users(item_id);
+CREATE INDEX IF NOT EXISTS idx_item_users_user_id ON item_users(user_id);
+
+-- Indexes for board_users junction table
+CREATE INDEX IF NOT EXISTS idx_board_users_board_id ON board_users(board_id);
+CREATE INDEX IF NOT EXISTS idx_board_users_user_id ON board_users(user_id);
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_boards_user_id ON boards(user_id);

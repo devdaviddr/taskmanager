@@ -65,6 +65,21 @@ export class BoardModel {
                   WHERE it2.item_id = i.id
                 ),
                 '[]'::json
+              ),
+              'assigned_users', COALESCE(
+                (
+                  SELECT json_agg(
+                    json_build_object(
+                      'id', u.id,
+                      'email', u.email,
+                      'name', u.name
+                    )
+                  )
+                  FROM item_users iu2
+                  JOIN users u ON iu2.user_id = u.id
+                  WHERE iu2.item_id = i.id
+                ),
+                '[]'::json
               )
             ) ORDER BY i.position
           ) FILTER (WHERE i.id IS NOT NULL AND i.archived = FALSE),

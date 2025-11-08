@@ -5,6 +5,12 @@ import Textarea from '../ui/Textarea'
 import Select from '../ui/Select'
 import { useState } from 'react'
 
+interface User {
+  id: number
+  email: string
+  name?: string
+}
+
 interface Item {
   id: number
   column_id: number
@@ -17,6 +23,7 @@ interface Item {
   label?: string
   priority?: 'high' | 'medium' | 'low'
   tags?: Tag[]
+  assigned_users?: User[]
   archived: boolean
   created_at: string
   updated_at: string
@@ -41,7 +48,9 @@ interface CardEditModalProps {
   editLabel: string
   editPriority: string
   editTags: Tag[]
+  editUsers: User[]
   availableTags: Tag[]
+  availableUsers: User[]
   onTitleChange: (value: string) => void
   onDescriptionChange: (value: string) => void
   onStartDateChange: (value: string) => void
@@ -50,6 +59,7 @@ interface CardEditModalProps {
   onLabelChange: (value: string) => void
   onPriorityChange: (value: string) => void
   onTagsChange: (tags: Tag[]) => void
+  onUsersChange: (users: User[]) => void
   onSave: () => void
   onDelete: () => void
   onArchive: () => void
@@ -70,7 +80,9 @@ export default function CardEditModal({
   editLabel,
   editPriority,
   editTags,
+  editUsers,
   availableTags,
+  availableUsers,
   onTitleChange,
   onDescriptionChange,
   onStartDateChange,
@@ -79,6 +91,7 @@ export default function CardEditModal({
   onLabelChange,
   onPriorityChange,
   onTagsChange,
+  onUsersChange,
   onSave,
   onDelete,
   onArchive,
@@ -88,11 +101,21 @@ export default function CardEditModal({
   archivePending
 }: CardEditModalProps) {
   const [tagInput, setTagInput] = useState('')
-  const [showDropdown, setShowDropdown] = useState(false)
+  const [showTagDropdown, setShowTagDropdown] = useState(false)
+  const [userInput, setUserInput] = useState('')
+  const [showUserDropdown, setShowUserDropdown] = useState(false)
 
   const filteredTags = tagInput
     ? availableTags.filter(tag => tag.name.toLowerCase().includes(tagInput.toLowerCase()) && !editTags.find(t => t.id === tag.id))
     : availableTags.filter(tag => !editTags.find(t => t.id === tag.id))
+
+  const filteredUsers = userInput
+    ? availableUsers.filter(user => 
+        (user.name?.toLowerCase().includes(userInput.toLowerCase()) || 
+         user.email.toLowerCase().includes(userInput.toLowerCase())) && 
+        !editUsers.find(u => u.id === user.id)
+      )
+    : availableUsers.filter(user => !editUsers.find(u => u.id === user.id))
 
   if (!isOpen || !selectedCard) return null
 
@@ -215,7 +238,7 @@ export default function CardEditModal({
               value={tagInput}
               onChange={(e) => {
                 setTagInput(e.target.value)
-                setShowDropdown(true)
+                setShowTagDropdown(true)
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -236,15 +259,15 @@ export default function CardEditModal({
                       onTagsChange([...editTags, tempTag])
                     }
                     setTagInput('')
-                    setShowDropdown(false)
+                    setShowTagDropdown(false)
                   }
                 }
               }}
-              onFocus={() => setShowDropdown(true)}
-              onBlur={() => setTimeout(() => setShowDropdown(false), 100)}
+              onFocus={() => setShowTagDropdown(true)}
+              onBlur={() => setTimeout(() => setShowTagDropdown(false), 100)}
               placeholder="Type to add or create tag..."
             />
-            {showDropdown && (
+            {showTagDropdown && (
               <div className="absolute z-[60] bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto w-full mt-1">
                 {filteredTags.length > 0 ? (
                   filteredTags.map(tag => (
@@ -254,7 +277,7 @@ export default function CardEditModal({
                       onClick={() => {
                         onTagsChange([...editTags, tag])
                         setTagInput('')
-                        setShowDropdown(false)
+                        setShowTagDropdown(false)
                       }}
                     >
                       <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: tag.color }}></span>
@@ -263,6 +286,62 @@ export default function CardEditModal({
                   ))
                 ) : tagInput ? (
                   <div className="px-3 py-2 text-gray-500">No matching tags</div>
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Assigned Users
+            </label>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {editUsers.map(user => (
+                <span
+                  key={user.id}
+                  className="inline-flex items-center text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800"
+                >
+                  {user.name || user.email}
+                  <button
+                    type="button"
+                    onClick={() => onUsersChange(editUsers.filter(u => u.id !== user.id))}
+                    className="ml-1 text-blue-600 hover:text-blue-800"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+            <Input
+              type="text"
+              value={userInput}
+              onChange={(e) => {
+                setUserInput(e.target.value)
+                setShowUserDropdown(true)
+              }}
+              onFocus={() => setShowUserDropdown(true)}
+              onBlur={() => setTimeout(() => setShowUserDropdown(false), 100)}
+              placeholder="Type to search and assign users..."
+            />
+            {showUserDropdown && (
+              <div className="absolute z-[60] bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto w-full mt-1">
+                {filteredUsers.length > 0 ? (
+                  filteredUsers.map(user => (
+                    <div
+                      key={user.id}
+                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                      onClick={() => {
+                        onUsersChange([...editUsers, user])
+                        setUserInput('')
+                        setShowUserDropdown(false)
+                      }}
+                    >
+                      <div className="font-medium">{user.name || 'No name'}</div>
+                      <div className="text-sm text-gray-500">{user.email}</div>
+                    </div>
+                  ))
+                ) : userInput ? (
+                  <div className="px-3 py-2 text-gray-500">No matching users</div>
                 ) : null}
               </div>
             )}

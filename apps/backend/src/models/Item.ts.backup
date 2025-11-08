@@ -223,28 +223,21 @@ export class ItemModel {
          }
        }
 
-        // Handle users if provided
-        if (itemData.user_ids !== undefined) {
-          // Remove all existing users for this item
-          await client.query('DELETE FROM item_users WHERE item_id = $1', [id]);
+       // Handle users if provided
+       if (itemData.user_ids !== undefined) {
+         // Remove all existing users for this item
+         await client.query('DELETE FROM item_users WHERE item_id = $1', [id]);
 
-          // Add new users if any
-          if (itemData.user_ids.length > 0) {
-            // Check which users exist
-            const existingUsers = await client.query('SELECT id FROM users WHERE id = ANY($1)', [itemData.user_ids]);
-            const existingIds = existingUsers.rows.map(row => row.id);
-            const validUserIds = itemData.user_ids.filter(id => existingIds.includes(id));
-
-            if (validUserIds.length > 0) {
-              const userValues = validUserIds.map((userId, index) => `($1, $${index + 2})`).join(', ');
-              const userParams = [id, ...validUserIds];
-              await client.query(`
-                INSERT INTO item_users (item_id, user_id)
-                VALUES ${userValues}
-              `, userParams);
-            }
-          }
-        }
+         // Add new users if any
+         if (itemData.user_ids.length > 0) {
+           const userValues = itemData.user_ids.map((userId, index) => `($1, $${index + 2})`).join(', ');
+           const userParams = [id, ...itemData.user_ids];
+           await client.query(`
+             INSERT INTO item_users (item_id, user_id)
+             VALUES ${userValues}
+           `, userParams);
+         }
+       }
 
       await client.query('COMMIT');
 
@@ -279,20 +272,76 @@ export class ItemModel {
     return await this.findById(id);
   }
 
-  static async assignUser(itemId: number, userId: number): Promise<boolean> {
-    const result = await pool.query(`
-      INSERT INTO item_users (item_id, user_id)
-      VALUES ($1, $2)
-      ON CONFLICT (item_id, user_id) DO NOTHING
-    `, [itemId, userId]);
-    return (result.rowCount ?? 0) > 0;
-  }
+  static async moveItem(id: number, moveData: MoveItemRequest): Promise<Item | null> {
+    const client = await pool.connect();
 
-  static async removeUser(itemId: number, userId: number): Promise<boolean> {
-    const result = await pool.query(`
-      DELETE FROM item_users
-      WHERE item_id = $1 AND user_id = $2
-    `, [itemId, userId]);
-    return (result.rowCount ?? 0) > 0;
+    try {
+      await client.query('BEGIN');
+
+      // Get current item
+      const currentItem = await client.query(`
+        SELECT column_id, position FROM items WHERE id = $1
+      `, [id]);
+
+      if (currentItem.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return null;
+      }
+
+      const { column_id: oldColumnId, position: oldPosition } = currentItem.rows[0];
+      const { column_id: newColumnId, position: newPosition } = moveData;
+
+      if (oldColumnId === newColumnId) {
+        // Moving within the same column
+        if (newPosition > oldPosition) {
+          // Moving down: shift items between old and new position up
+          await client.query(`
+            UPDATE items
+            SET position = position - 1
+            WHERE column_id = $1 AND position > $2 AND position <= $3
+          `, [oldColumnId, oldPosition, newPosition]);
+        } else {
+          // Moving up: shift items between new and old position down
+          await client.query(`
+            UPDATE items
+            SET position = position + 1
+            WHERE column_id = $1 AND position >= $2 AND position < $3
+          `, [oldColumnId, newPosition, oldPosition]);
+        }
+      } else {
+        // Moving to a different column
+        // Shift items in old column up
+        await client.query(`
+          UPDATE items
+          SET position = position - 1
+          WHERE column_id = $1 AND position > $2
+        `, [oldColumnId, oldPosition]);
+
+        // Shift items in new column down
+        await client.query(`
+          UPDATE items
+          SET position = position + 1
+          WHERE column_id = $1 AND position >= $2
+        `, [newColumnId, newPosition]);
+      }
+
+      // Update the item
+      const result = await client.query(`
+        UPDATE items
+        SET column_id = $1, position = $2, updated_at = NOW()
+        WHERE id = $3
+        RETURNING id
+      `, [newColumnId, newPosition, id]);
+
+      await client.query('COMMIT');
+
+      // Fetch the complete item with tags
+      return await this.findById(id);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }

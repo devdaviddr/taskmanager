@@ -100,6 +100,7 @@ export interface Item {
   label?: string;
   priority?: 'high' | 'medium' | 'low' | null;
   tags?: Tag[];
+  assigned_users?: User[];
   archived: boolean;
   created_at: Date;
   updated_at: Date;
@@ -121,6 +122,20 @@ export interface CreateItemRequest {
   label?: string | null;
   priority?: 'high' | 'medium' | 'low' | null;
   tag_ids?: number[];
+  user_ids?: number[];
+}
+
+export interface UpdateItemRequest {
+  title?: string;
+  description?: string;
+  position?: number;
+  start_date?: Date;
+  end_date?: Date;
+  effort?: number;
+  label?: string | null;
+  priority?: 'high' | 'medium' | 'low' | null;
+  tag_ids?: number[];
+  user_ids?: number[];
 }
 
 export interface MoveItemRequest {

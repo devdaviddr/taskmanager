@@ -10,6 +10,7 @@ itemRoutes.post('/columns/:columnId/items', authMiddleware, ItemController.creat
 itemRoutes.put('/items/:id', authMiddleware, ItemController.update);
 itemRoutes.put('/items/:id/archive', authMiddleware, ItemController.archive);
 itemRoutes.delete('/items/:id', authMiddleware, ItemController.delete);
-itemRoutes.put('/items/:id/move', authMiddleware, ItemController.move);
+itemRoutes.post('/items/:id/users', authMiddleware, ItemController.assignUser);
+itemRoutes.delete('/items/:id/users/:userId', authMiddleware, ItemController.removeUser);
 
 export default itemRoutes;

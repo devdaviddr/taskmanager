@@ -15,9 +15,16 @@ interface Item {
   label?: string
   priority?: 'high' | 'medium' | 'low'
   tags?: Tag[]
+  assigned_users?: User[]
   archived: boolean
   created_at: string
   updated_at: string
+}
+
+interface User {
+  id: number
+  email: string
+  name?: string
 }
 
 interface Tag {

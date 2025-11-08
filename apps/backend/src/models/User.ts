@@ -31,7 +31,16 @@ export class UserModel {
     return result.rows[0];
   }
 
+  static async findAll(): Promise<User[]> {
+    const result = await pool.query(`
+      SELECT id, email, name, created_at, updated_at
+      FROM users
+      ORDER BY name, email
+    `);
+    return result.rows;
+  }
+
   static async verifyPassword(user: User, password: string): Promise<boolean> {
-    return bcrypt.compare(password, user.password_hash);
+    return await bcrypt.compare(password, user.password_hash);
   }
 }

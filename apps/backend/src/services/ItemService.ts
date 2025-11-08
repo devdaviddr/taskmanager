@@ -92,19 +92,21 @@ export class ItemService {
     }
   }
 
-  static async moveItem(id: number, moveData: MoveItemRequest): Promise<Item> {
+  static async assignUserToItem(itemId: number, userId: number): Promise<boolean> {
     try {
-      const item = await ItemModel.moveItem(id, moveData);
-      if (!item) {
-        throw new Error('Item not found');
-      }
-      return item;
+      return await ItemModel.assignUser(itemId, userId);
     } catch (error) {
-      console.error('Service error - moveItem:', error);
-      if (error instanceof Error && error.message === 'Item not found') {
-        throw error;
-      }
-      throw new Error('Failed to move item');
+      console.error('Service error - assignUserToItem:', error);
+      throw new Error('Failed to assign user to item');
+    }
+  }
+
+  static async removeUserFromItem(itemId: number, userId: number): Promise<boolean> {
+    try {
+      return await ItemModel.removeUser(itemId, userId);
+    } catch (error) {
+      console.error('Service error - removeUserFromItem:', error);
+      throw new Error('Failed to remove user from item');
     }
   }
 
@@ -155,6 +157,10 @@ export class ItemService {
 
     if (data.tag_ids !== undefined && (!Array.isArray(data.tag_ids) || !data.tag_ids.every(id => typeof id === 'number'))) {
       throw new Error('Validation error: Tag IDs must be an array of numbers');
+    }
+
+    if (data.user_ids !== undefined && (!Array.isArray(data.user_ids) || !data.user_ids.every(id => typeof id === 'number'))) {
+      throw new Error('Validation error: User IDs must be an array of numbers');
     }
   }
 
@@ -207,6 +213,10 @@ export class ItemService {
 
     if (data.tag_ids !== undefined && (!Array.isArray(data.tag_ids) || !data.tag_ids.every(id => typeof id === 'number'))) {
       throw new Error('Validation error: Tag IDs must be an array of numbers');
+    }
+
+    if (data.user_ids !== undefined && (!Array.isArray(data.user_ids) || !data.user_ids.every(id => typeof id === 'number'))) {
+      throw new Error('Validation error: User IDs must be an array of numbers');
     }
   }
 }

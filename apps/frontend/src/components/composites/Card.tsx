@@ -12,9 +12,16 @@ interface Item {
   label?: string
   priority?: 'high' | 'medium' | 'low'
   tags?: Tag[]
+  assigned_users?: User[]
   archived: boolean
   created_at: string
   updated_at: string
+}
+
+interface User {
+  id: number
+  email: string
+  name?: string
 }
 
 interface Tag {
@@ -73,14 +80,34 @@ export default function Card({ item, index, columnTheme, onClick }: CardProps) {
           ref={itemProvided.innerRef}
           {...itemProvided.draggableProps}
           {...itemProvided.dragHandleProps}
-          className={`${columnClasses} p-2 rounded-lg border border-gray-200 shadow-sm cursor-move hover:shadow-md transition-all duration-150 ${
+          className={`${columnClasses} p-2 rounded-lg border border-gray-200 shadow-sm cursor-move hover:shadow-md transition-all duration-150 relative ${
             itemSnapshot.isDragging
               ? 'shadow-xl opacity-95 border-blue-400 ring-2 ring-blue-400/50'
               : 'hover:border-gray-300 hover:shadow-md'
           }`}
           onClick={onClick}
         >
-          <div className="space-y-1.5">
+          {/* Assigned users in top right */}
+          {item.assigned_users && item.assigned_users.length > 0 && (
+            <div className="absolute top-2 right-2 flex -space-x-1">
+              {item.assigned_users.slice(0, 3).map(user => (
+                <div
+                  key={user.id}
+                  className="w-5 h-5 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center text-xs font-medium text-white"
+                  title={user.name || user.email}
+                >
+                  {(user.name || user.email).charAt(0).toUpperCase()}
+                </div>
+              ))}
+              {item.assigned_users.length > 3 && (
+                <div className="w-5 h-5 rounded-full bg-gray-400 border-2 border-white flex items-center justify-center text-xs font-medium text-white">
+                  +{item.assigned_users.length - 3}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-1.5 pr-16">
             <h4 className={`font-semibold text-xs leading-tight ${textClasses}`}>{item.title}</h4>
 
             {item.description && (
@@ -110,15 +137,15 @@ export default function Card({ item, index, columnTheme, onClick }: CardProps) {
                   {dueInfo.text}
                 </span>
               )}
-              {item.tags && item.tags.map(tag => (
-                <span
-                  key={tag.id}
-                  className="inline-block text-xs px-1.5 py-0.5 rounded font-medium text-white"
-                  style={{ backgroundColor: tag.color }}
-                >
-                  {tag.name}
-                </span>
-              ))}
+               {item.tags && item.tags.map(tag => (
+                 <span
+                   key={tag.id}
+                   className="inline-block text-xs px-1.5 py-0.5 rounded font-medium text-white"
+                   style={{ backgroundColor: tag.color }}
+                 >
+                   {tag.name}
+                 </span>
+               ))}
             </div>
 
           </div>

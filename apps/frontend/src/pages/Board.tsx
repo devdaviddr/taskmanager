@@ -5,7 +5,7 @@ import type { DropResult } from '@hello-pangea/dnd'
 import { CogIcon, PlusIcon } from '@heroicons/react/24/outline'
 import PageLayout from '../components/PageLayout'
 import PageHeader from '../components/PageHeader'
-import { boardsAPI, tagsAPI } from '../services/api'
+import { boardsAPI, tagsAPI, usersAPI } from '../services/api'
 import { useBoardState } from '../hooks/useBoardState'
 import { useBoardMutations } from '../hooks/useBoardMutations'
 import Column from '../components/sections/Column'
@@ -50,9 +50,16 @@ interface Item {
   label?: string
   priority?: 'high' | 'medium' | 'low'
   tags?: Tag[]
+  assigned_users?: User[]
   archived: boolean
   created_at: string
   updated_at: string
+}
+
+interface User {
+  id: number
+  email: string
+  name?: string
 }
 
 interface Tag {
@@ -84,6 +91,14 @@ export default function BoardPage() {
     queryKey: ['tags'],
     queryFn: async () => {
       const response = await tagsAPI.getAll()
+      return response.data
+    },
+  })
+
+  const { data: availableUsers = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const response = await usersAPI.getAll()
       return response.data
     },
   })
@@ -144,6 +159,7 @@ export default function BoardPage() {
     boardState.setEditLabel(item.label || '')
     boardState.setEditPriority(item.priority || '')
     boardState.setEditTags(item.tags || [])
+    boardState.setEditUsers(item.assigned_users || [])
     boardState.setIsModalOpen(true)
   }
 
@@ -195,6 +211,7 @@ export default function BoardPage() {
           label: boardState.editLabel === '' ? null : boardState.editLabel,
           priority: boardState.editPriority ? (boardState.editPriority as 'high' | 'medium' | 'low') : null,
           tag_ids: allTagIds,
+          user_ids: boardState.editUsers.map(u => u.id),
         })
         boardState.handleCloseModal()
       } catch (error) {
@@ -413,7 +430,9 @@ const handleCancelEditTag = () => {
         editLabel={boardState.editLabel}
         editPriority={boardState.editPriority}
         editTags={boardState.editTags}
+        editUsers={boardState.editUsers}
         availableTags={availableTags}
+        availableUsers={availableUsers}
         onTitleChange={boardState.setEditTitle}
         onDescriptionChange={boardState.setEditDescription}
         onStartDateChange={boardState.setEditStartDate}
@@ -422,6 +441,7 @@ const handleCancelEditTag = () => {
         onLabelChange={boardState.setEditLabel}
         onPriorityChange={boardState.setEditPriority}
         onTagsChange={boardState.setEditTags}
+        onUsersChange={boardState.setEditUsers}
         onSave={handleSaveCard}
         onDelete={handleDeleteCard}
         onArchive={handleArchiveCard}
