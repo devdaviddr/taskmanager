@@ -35,6 +35,7 @@ export interface Tag {
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
+  withCredentials: true, // Enable sending cookies with requests
 })
 
 // Request interceptor - no longer needed for auth headers since we use cookies
@@ -49,108 +50,22 @@ api.interceptors.request.use(
 );
 
 // Response interceptor to handle 401 errors and token refresh
-let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (value?: unknown) => void;
-  reject: (error?: unknown) => void;
-}> = [];
-
-const processQueue = (error: Error | null, token: string | null = null) => {
-  failedQueue.forEach(({ resolve, reject }) => {
-    if (error) {
-      reject(error);
-    } else {
-      resolve(token);
-    }
-  });
-
-  failedQueue = [];
-};
-
-// Global refresh tracking
-declare global {
-  var lastRefreshTime: number;
-}
-
-const REFRESH_INTERVAL = 45 * 60 * 1000; // 45 minutes in milliseconds
-
-if (typeof window !== 'undefined') {
-  if (!window.lastRefreshTime) {
-    window.lastRefreshTime = 0;
-  }
-}
-
-const shouldRefreshProactively = () => {
-  if (typeof window === 'undefined') return false;
-  return Date.now() - window.lastRefreshTime > REFRESH_INTERVAL;
-};
-
-const refreshTokenIfNeeded = async () => {
-  if (shouldRefreshProactively()) {
-    try {
-      await api.post('/auth/refresh');
-      if (typeof window !== 'undefined') {
-        window.lastRefreshTime = Date.now();
-      }
-    } catch (error) {
-      // If proactive refresh fails, we'll handle it reactively on 401
-      console.warn('Proactive token refresh failed:', error);
-    }
-  }
-};
-
-// Request interceptor to proactively refresh tokens
-api.interceptors.request.use(
-  async (config) => {
-    // Check if we should refresh proactively before making requests
-    await refreshTokenIfNeeded();
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        // If refresh is already in progress, queue this request
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then(() => {
-          return api(originalRequest);
-        }).catch(err => {
-          return Promise.reject(err);
-        });
+      // Don't redirect on auth endpoints (me, login, register, refresh) as these are expected to fail when not authenticated
+      if (originalRequest.url?.includes('/auth/')) {
+        return Promise.reject(error);
       }
-
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        // Try to refresh the token
-        await api.post('/auth/refresh');
-        lastRefreshTime = Date.now();
-        
-        // Refresh succeeded, process queued requests
-        processQueue(null);
-        
-        // Retry the original request
-        return api(originalRequest);
-      } catch (refreshError) {
-        // Refresh failed, process queue with error and redirect
-        processQueue(refreshError as Error, null);
-        
-        // Clear any auth state and redirect to login
+      
+      // For other endpoints, redirect to login on 401
+      if (typeof window !== 'undefined') {
         window.location.href = '/login';
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
       }
+      return Promise.reject(error);
     }
 
     return Promise.reject(error);

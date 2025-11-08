@@ -49,9 +49,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         window.lastRefreshTime = Date.now();
       }
     } catch {
+      // If auth check fails, user is not authenticated
       setUser(null);
+    } finally {
+      // Always set loading to false, even on error
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const login = async (email: string, password: string) => {

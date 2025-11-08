@@ -10,7 +10,10 @@ import { AuthService } from './services/AuthService';
 const app = new Hono();
 
 // CORS middleware
-app.use('*', cors());
+app.use('*', cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'], // Allow frontend origins
+  credentials: true, // Allow cookies to be sent
+}));
 
 // Middleware
 app.use('*', errorHandler);
