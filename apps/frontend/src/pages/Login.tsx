@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -9,10 +9,16 @@ interface LoginForm {
 }
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loadingForm, setLoadingForm] = useState(false);
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate('/app/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, loading, navigate]);
 
   const {
     register,
@@ -21,17 +27,26 @@ export default function Login() {
   } = useForm<LoginForm>();
 
   const onSubmit = async (data: LoginForm) => {
-    setLoading(true);
+    setLoadingForm(true);
     setError('');
     try {
       await login(data.email, data.password);
       navigate('/app/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      setError(error.response?.data?.error || 'Login failed');
     } finally {
-      setLoading(false);
+      setLoadingForm(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -94,10 +109,10 @@ export default function Login() {
           <div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loadingForm}
               className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              {loading ? 'Signing in...' : 'Sign in'}
+              {loadingForm ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
 
