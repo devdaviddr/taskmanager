@@ -6,57 +6,30 @@
 - **Lint**: `npm run lint --workspace=apps/frontend` (ESLint with React rules)
 - **Test**: No test framework configured
 
-## Code Style & Best Practices
+## Code Style Guidelines
 
-### Backend (Node.js + Hono + TypeScript + PostgreSQL)
-- **Modules**: ES modules with `"type": "module"` and strict TypeScript
-- **Architecture**: Controller → Service → Model pattern with separation of concerns
-- **Controllers**: Class-based with static methods, Hono Context handling
-- **Services**: Business logic, validation, and error transformation
-- **Models**: Data access layer with parameterized queries (SQL injection prevention)
-- **Database**: PostgreSQL with connection pooling, proper indexing, and transactions where needed
-- **Error Handling**: Try-catch blocks with specific error messages, console.error logging
-- **Validation**: Input validation in service layer with descriptive error messages
-- **Imports**: `import type` for type-only imports, avoid runtime overhead
+### TypeScript
+- Strict mode enabled, no unused variables/parameters
+- PascalCase for classes/components/interfaces, camelCase for functions/variables
+- Use interfaces for API types, avoid `any`, prefer string enums
+- Optional chaining (`?.`), nullish coalescing (`??`), strict null checks
 
-### Frontend (React + TypeScript + Vite + Tailwind CSS)
-- **Components**: Function components with default exports, hooks for state/effects
-- **TypeScript**: Strict mode with no unused variables/parameters
-- **Styling**: Tailwind CSS with utility-first approach, responsive design
-- **State Management**: React Query for server state, local state with useState/useReducer
-- **API Integration**: Axios with centralized configuration, proper error handling
-- **Routing**: React Router with nested routes and protected routes when needed
-- **Performance**: React.memo for expensive components, lazy loading for routes
-- **ESLint**: Recommended rules + React hooks + React refresh for hot reloading
+### Backend (Node.js + Hono + PostgreSQL)
+- ES modules with `"type": "module"`
+- Controller → Service → Model architecture
+- Class-based controllers with static methods
+- Parameterized queries, connection pooling, transactions
+- `import type` for type-only imports
 
-### General TypeScript Best Practices
-- **Naming**: PascalCase (classes/components/interfaces), camelCase (functions/variables)
-- **Types**: Interface definitions for API requests/responses, avoid `any` type
-- **Null Safety**: Use optional chaining (`?.`), nullish coalescing (`??`), strict null checks
-- **Generics**: Use generics for reusable components and utility functions
-- **Type Guards**: Implement type guards for runtime type checking
-- **Enums**: Use string enums for better debugging and serialization
+### Frontend (React + Vite + Tailwind)
+- Function components with default exports
+- React Query for server state, useState/useReducer for local state
+- Axios for API calls with centralized config
+- React Router for routing, lazy loading for performance
+- ESLint with React hooks and refresh plugins
 
-### PostgreSQL Best Practices
-- **Connection**: Use connection pooling (pg.Pool) for efficient resource management
-- **Queries**: Always use parameterized queries to prevent SQL injection
-- **Indexing**: Create indexes on frequently queried columns and foreign keys
-- **Transactions**: Use transactions for multi-step operations requiring consistency
-- **Migrations**: Version-controlled schema changes (consider migration tools)
-- **Constraints**: Use database constraints (NOT NULL, UNIQUE, FOREIGN KEY) for data integrity
-
-### React Best Practices
-- **Hooks**: Custom hooks for reusable logic, follow rules of hooks strictly
-- **Components**: Keep components small and focused, use composition over inheritance
-- **Props**: Use destructuring, default props, and PropTypes/interfaces for type safety
-- **Effects**: Proper cleanup in useEffect, avoid infinite loops
-- **Keys**: Stable, unique keys for list rendering
-- **Accessibility**: Semantic HTML, ARIA attributes, keyboard navigation
-
-### Security Best Practices
-- **Input Validation**: Validate and sanitize all user inputs on both client and server
-- **Authentication**: Implement proper auth (JWT, sessions) for protected routes
-- **CORS**: Configure CORS properly for cross-origin requests
-- **Environment Variables**: Never commit secrets, use .env files
-- **HTTPS**: Always use HTTPS in production
-- **Rate Limiting**: Implement rate limiting for API endpoints
+### Security & Best Practices
+- Input validation on client and server
+- Parameterized queries to prevent SQL injection
+- Never commit secrets, use .env files
+- HTTPS in production, proper CORS config
