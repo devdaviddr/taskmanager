@@ -53,6 +53,7 @@ export interface LoginRequest {
 export interface AuthResponse {
   user: Omit<User, 'password_hash'>;
   token: string;
+  refreshToken: string;
 }
 
 // New types for boards feature

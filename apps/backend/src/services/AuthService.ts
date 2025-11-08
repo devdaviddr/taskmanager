@@ -1,10 +1,12 @@
 import jwt from 'jsonwebtoken';
 import { UserModel } from '../models/User';
 import { pool } from '../config/database';
+import crypto from 'crypto';
 import type { User, CreateUserRequest, LoginRequest, AuthResponse } from '../types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN = '1h';
+const REFRESH_TOKEN_EXPIRES_IN = '7d';
 
 export class AuthService {
   static generateToken(user: User): string {
@@ -32,11 +34,14 @@ export class AuthService {
 
     const user = await UserModel.create(userData);
     const token = this.generateToken(user);
+    const refreshToken = this.generateRefreshToken();
+    await this.storeRefreshToken(user.id, refreshToken);
 
     const { password_hash, ...userWithoutPassword } = user;
     return {
       user: userWithoutPassword,
       token,
+      refreshToken,
     };
   }
 
@@ -52,11 +57,14 @@ export class AuthService {
     }
 
     const token = this.generateToken(user);
+    const refreshToken = this.generateRefreshToken();
+    await this.storeRefreshToken(user.id, refreshToken);
 
     const { password_hash, ...userWithoutPassword } = user;
     return {
       user: userWithoutPassword,
       token,
+      refreshToken,
     };
   }
 
@@ -73,7 +81,6 @@ export class AuthService {
       if (!payload) return; // Don't blacklist invalid tokens
 
       // Hash the token for storage (using SHA-256)
-      const crypto = await import('crypto');
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
       // Calculate expiration time from token payload
@@ -90,7 +97,6 @@ export class AuthService {
 
   static async isTokenBlacklisted(token: string): Promise<boolean> {
     try {
-      const crypto = await import('crypto');
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
       const result = await pool.query(
@@ -108,8 +114,56 @@ export class AuthService {
   static async cleanupExpiredTokens(): Promise<void> {
     try {
       await pool.query('DELETE FROM invalidated_tokens WHERE expires_at <= NOW()');
+      await pool.query('DELETE FROM refresh_tokens WHERE expires_at <= NOW()');
     } catch (error) {
-      console.error('Error cleaning up expired tokens:', error);
+      console.error('Error during token cleanup:', error);
+    }
+  }
+
+  static generateRefreshToken(): string {
+    return crypto.randomBytes(32).toString('hex');
+  }
+
+  static async storeRefreshToken(userId: number, refreshToken: string): Promise<void> {
+    try {
+      const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      await pool.query(
+        'INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)',
+        [userId, tokenHash, expiresAt]
+      );
+    } catch (error) {
+      console.error('Error storing refresh token:', error);
+      throw error;
+    }
+  }
+
+  static async validateRefreshToken(refreshToken: string): Promise<User | null> {
+    try {
+      const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+      const result = await pool.query(
+        'SELECT user_id FROM refresh_tokens WHERE token_hash = $1 AND expires_at > NOW()',
+        [tokenHash]
+      );
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      return UserModel.findById(result.rows[0].user_id);
+    } catch (error) {
+      console.error('Error validating refresh token:', error);
+      return null;
+    }
+  }
+
+  static async invalidateRefreshTokens(userId: number): Promise<void> {
+    try {
+      await pool.query('DELETE FROM refresh_tokens WHERE user_id = $1', [userId]);
+    } catch (error) {
+      console.error('Error invalidating refresh tokens:', error);
     }
   }
 }

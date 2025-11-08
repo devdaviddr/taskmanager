@@ -41,40 +41,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const checkAuth = async () => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const response = await api.get('/auth/me');
-        setUser(response.data.user);
-      } catch {
-        localStorage.removeItem('token');
-      }
+    try {
+      const response = await api.get('/auth/me');
+      setUser(response.data.user);
+    } catch {
+      setUser(null);
     }
     setLoading(false);
   };
 
   const login = async (email: string, password: string) => {
     const response = await api.post('/auth/login', { email, password });
-    const { user, token } = response.data;
-    localStorage.setItem('token', token);
-    setUser(user);
+    setUser(response.data.user);
   };
 
   const register = async (email: string, password: string, name?: string) => {
     const response = await api.post('/auth/register', { email, password, name });
-    const { user, token } = response.data;
-    localStorage.setItem('token', token);
-    setUser(user);
+    setUser(response.data.user);
   };
 
   const logout = async () => {
     try {
       await api.post('/auth/logout');
     } catch (error) {
-      // Ignore logout errors - token might already be invalid
+      // Ignore logout errors - user is being logged out anyway
       console.warn('Logout API call failed:', error);
     } finally {
-      localStorage.removeItem('token');
       setUser(null);
     }
   };

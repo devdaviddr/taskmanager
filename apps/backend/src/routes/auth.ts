@@ -21,7 +21,14 @@ authRoutes.post('/register', async (c) => {
     const validatedData = registerSchema.parse(body);
 
     const result = await AuthService.register(validatedData);
-    return c.json(result);
+    
+    const response = c.json({ user: result.user });
+    
+    // Set httpOnly cookies
+    response.headers.append('Set-Cookie', `accessToken=${result.token}; HttpOnly; Secure; SameSite=Strict; Max-Age=${60 * 60}; Path=/`);
+    response.headers.append('Set-Cookie', `refreshToken=${result.refreshToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}; Path=/`);
+
+    return response;
   } catch (error) {
     if (error instanceof z.ZodError) {
       return c.json({ error: 'Validation error', details: error.issues }, 400);
@@ -36,7 +43,14 @@ authRoutes.post('/login', async (c) => {
     const validatedData = loginSchema.parse(body);
 
     const result = await AuthService.login(validatedData);
-    return c.json(result);
+    
+    const response = c.json({ user: result.user });
+    
+    // Set httpOnly cookies
+    response.headers.append('Set-Cookie', `accessToken=${result.token}; HttpOnly; Secure; SameSite=Strict; Max-Age=${60 * 60}; Path=/`);
+    response.headers.append('Set-Cookie', `refreshToken=${result.refreshToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}; Path=/`);
+
+    return response;
   } catch (error) {
     if (error instanceof z.ZodError) {
       return c.json({ error: 'Validation error', details: error.issues }, 400);
@@ -46,12 +60,22 @@ authRoutes.post('/login', async (c) => {
 });
 
 authRoutes.get('/me', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const cookieHeader = c.req.header('Cookie');
+  if (!cookieHeader) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
-  const token = authHeader.substring(7);
+  // Parse cookies manually
+  const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+    const [name, value] = cookie.trim().split('=');
+    acc[name] = value;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const token = cookies.accessToken;
+  if (!token) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
 
   // Check if token is blacklisted
   const isBlacklisted = await AuthService.isTokenBlacklisted(token);
@@ -69,17 +93,79 @@ authRoutes.get('/me', async (c) => {
 });
 
 authRoutes.post('/logout', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const cookieHeader = c.req.header('Cookie');
+  if (!cookieHeader) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
-  const token = authHeader.substring(7);
+  // Parse cookies manually
+  const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+    const [name, value] = cookie.trim().split('=');
+    acc[name] = value;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const token = cookies.accessToken;
+  if (token) {
+    // Blacklist the access token
+    await AuthService.blacklistToken(token);
+  }
+
+  const refreshToken = cookies.refreshToken;
+  if (refreshToken) {
+    // Invalidate refresh tokens for this user
+    const user = await AuthService.validateRefreshToken(refreshToken);
+    if (user) {
+      await AuthService.invalidateRefreshTokens(user.id);
+    }
+  }
+
+  // Clear cookies
+  const response = c.json({ message: 'Logged out successfully' });
+  response.headers.append('Set-Cookie', 'accessToken=; HttpOnly; Secure; SameSite=Strict; Max-Age=0; Path=/');
+  response.headers.append('Set-Cookie', 'refreshToken=; HttpOnly; Secure; SameSite=Strict; Max-Age=0; Path=/');
+
+  return response;
+});
+
+authRoutes.post('/refresh', async (c) => {
+  const cookieHeader = c.req.header('Cookie');
+  if (!cookieHeader) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  // Parse cookies manually
+  const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+    const [name, value] = cookie.trim().split('=');
+    acc[name] = value;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const refreshToken = cookies.refreshToken;
+  if (!refreshToken) {
+    return c.json({ error: 'Refresh token required' }, 401);
+  }
+
+  const user = await AuthService.validateRefreshToken(refreshToken);
+  if (!user) {
+    return c.json({ error: 'Invalid refresh token' }, 401);
+  }
+
+  // Generate new tokens
+  const newAccessToken = AuthService.generateToken(user);
+  const newRefreshToken = AuthService.generateRefreshToken();
   
-  // Blacklist the token
-  await AuthService.blacklistToken(token);
+  // Store new refresh token and invalidate old one
+  await AuthService.invalidateRefreshTokens(user.id);
+  await AuthService.storeRefreshToken(user.id, newRefreshToken);
+
+  const response = c.json({ user: { id: user.id, email: user.email, name: user.name } });
   
-  return c.json({ message: 'Logged out successfully' });
+  // Set new cookies
+  response.headers.append('Set-Cookie', `accessToken=${newAccessToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=${60 * 60}; Path=/`);
+  response.headers.append('Set-Cookie', `refreshToken=${newRefreshToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}; Path=/`);
+
+  return response;
 });
 
 export default authRoutes;

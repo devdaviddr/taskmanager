@@ -37,13 +37,10 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
 })
 
-// Request interceptor to add JWT token
+// Request interceptor - no longer needed for auth headers since we use cookies
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Cookies are sent automatically by the browser
     return config;
   },
   (error) => {
@@ -51,13 +48,20 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle 401 errors
+// Response interceptor to handle 401 errors and token refresh
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Try to refresh the token
+      try {
+        await api.post('/auth/refresh');
+        // Retry the original request
+        return api(error.config);
+      } catch {
+        // Refresh failed, redirect to login
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
