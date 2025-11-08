@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { boardsAPI, itemsAPI, columnsAPI } from '../services/api'
+import { boardsAPI, itemsAPI, columnsAPI, tagsAPI } from '../services/api'
 
 export function useBoardMutations(boardId: number) {
   const queryClient = useQueryClient()
@@ -118,6 +118,37 @@ export function useBoardMutations(boardId: number) {
     },
   })
 
+  const createTagMutation = useMutation({
+    mutationFn: (data: { name: string; color?: string }) => tagsAPI.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+    },
+    onError: (error) => {
+      console.error('Failed to create tag:', error)
+    },
+  })
+
+  const updateTagMutation = useMutation({
+    mutationFn: ({ id, name, color }: { id: number; name?: string; color?: string }) =>
+      tagsAPI.update(id, { name, color }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+    },
+    onError: (error) => {
+      console.error('Failed to update tag:', error)
+    },
+  })
+
+  const deleteTagMutation = useMutation({
+    mutationFn: (id: number) => tagsAPI.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+    },
+    onError: (error) => {
+      console.error('Failed to delete tag:', error)
+    },
+  })
+
   return {
     createItemMutation,
     moveItemMutation,
@@ -129,6 +160,9 @@ export function useBoardMutations(boardId: number) {
     deleteColumnMutation,
     moveColumnMutation,
     updateBoardMutation,
-    deleteBoardMutation
+    deleteBoardMutation,
+    createTagMutation,
+    updateTagMutation,
+    deleteTagMutation
   }
 }

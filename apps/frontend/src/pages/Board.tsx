@@ -311,6 +311,47 @@ export default function BoardPage() {
     }
   }
 
+  const handleCreateTag = () => {
+    if (boardState.newTagName.trim()) {
+      mutations.createTagMutation.mutate({ name: boardState.newTagName.trim(), color: boardState.newTagColor }, {
+        onSuccess: () => {
+          boardState.setNewTagName('')
+          boardState.setNewTagColor('gray')
+        }
+      })
+    }
+  }
+
+  const handleStartEditTag = (tag: Tag) => {
+    boardState.setEditingTagId(tag.id)
+    boardState.setEditTagName(tag.name)
+    boardState.setEditTagColor(tag.color)
+  }
+
+  const handleSaveEditTag = () => {
+    if (boardState.editingTagId && boardState.editTagName.trim()) {
+      mutations.updateTagMutation.mutate({ id: boardState.editingTagId, name: boardState.editTagName.trim(), color: boardState.editTagColor }, {
+        onSuccess: () => {
+          boardState.setEditingTagId(null)
+          boardState.setEditTagName('')
+          boardState.setEditTagColor('gray')
+        }
+      })
+    }
+  }
+
+  const handleCancelEditTag = () => {
+    boardState.setEditingTagId(null)
+    boardState.setEditTagName('')
+    boardState.setEditTagColor('gray')
+  }
+
+  const handleDeleteTag = (id: number) => {
+    if (window.confirm('Are you sure you want to delete this tag? This will remove it from all cards.')) {
+      mutations.deleteTagMutation.mutate(id)
+    }
+  }
+
   const isDarkBackground = board.background && ['bg-blue-600', 'bg-green-600', 'bg-purple-600', 'bg-red-600'].includes(board.background)
 
   return (
@@ -405,6 +446,24 @@ export default function BoardPage() {
         savePending={mutations.updateBoardMutation.isPending}
         archivePending={mutations.updateBoardMutation.isPending}
         deletePending={mutations.deleteBoardMutation.isPending}
+        tags={availableTags}
+        newTagName={boardState.newTagName}
+        newTagColor={boardState.newTagColor}
+        onNewTagNameChange={boardState.setNewTagName}
+        onNewTagColorChange={boardState.setNewTagColor}
+        onCreateTag={handleCreateTag}
+        createTagPending={mutations.createTagMutation.isPending}
+        editingTagId={boardState.editingTagId}
+        editTagName={boardState.editTagName}
+        editTagColor={boardState.editTagColor}
+        onEditTagNameChange={boardState.setEditTagName}
+        onEditTagColorChange={boardState.setEditTagColor}
+        onStartEditTag={handleStartEditTag}
+        onSaveEditTag={handleSaveEditTag}
+        onCancelEditTag={handleCancelEditTag}
+        onDeleteTag={handleDeleteTag}
+        updateTagPending={mutations.updateTagMutation.isPending}
+        deleteTagPending={mutations.deleteTagMutation.isPending}
       />
 
       <AddColumnModal

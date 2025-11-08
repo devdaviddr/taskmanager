@@ -47,6 +47,12 @@ export function useBoardState() {
   const [isEditingColumn, setIsEditingColumn] = useState(false)
   const [editingColumnId, setEditingColumnId] = useState<number | null>(null)
 
+  const [newTagName, setNewTagName] = useState('')
+  const [newTagColor, setNewTagColor] = useState('gray')
+  const [editingTagId, setEditingTagId] = useState<number | null>(null)
+  const [editTagName, setEditTagName] = useState('')
+  const [editTagColor, setEditTagColor] = useState('gray')
+
   const handleCloseModal = () => {
     setIsModalOpen(false)
     setSelectedCard(null)
@@ -105,6 +111,16 @@ export function useBoardState() {
     setIsEditingColumn,
     editingColumnId,
     setEditingColumnId,
+    newTagName,
+    setNewTagName,
+    newTagColor,
+    setNewTagColor,
+    editingTagId,
+    setEditingTagId,
+    editTagName,
+    setEditTagName,
+    editTagColor,
+    setEditTagColor,
     handleCloseModal,
     handleCloseSettings
   }
