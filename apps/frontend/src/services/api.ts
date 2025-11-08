@@ -33,6 +33,13 @@ export interface Tag {
   updated_at: string;
 }
 
+// Global refresh function reference
+let refreshTokenFunction: (() => Promise<void>) | null = null;
+
+export const setRefreshTokenFunction = (fn: () => Promise<void>) => {
+  refreshTokenFunction = fn;
+};
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
   withCredentials: true, // Enable sending cookies with requests
@@ -61,11 +68,28 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
       
-      // For other endpoints, redirect to login on 401
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+      // If we have a refresh function, try to refresh the token
+      if (refreshTokenFunction) {
+        originalRequest._retry = true;
+        try {
+          await refreshTokenFunction();
+          // Retry the original request
+          return api.request(originalRequest);
+        } catch (refreshError) {
+          console.error('Token refresh failed, redirecting to login:', refreshError);
+          // If refresh fails, redirect to login
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
+          return Promise.reject(refreshError);
+        }
+      } else {
+        // No refresh function available, redirect to login
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+        return Promise.reject(error);
       }
-      return Promise.reject(error);
     }
 
     return Promise.reject(error);
