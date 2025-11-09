@@ -2,6 +2,8 @@
 
 A modern, full-stack task management application built with React, TypeScript, Node.js, and PostgreSQL. Features a clean, responsive UI with board-based project management and user authentication.
 
+![TaskManager Screenshot](docs/screen1.png)
+
 ## 🚀 Features
 
 - **JWT Authentication**: Secure login/signup with automatic token refresh
