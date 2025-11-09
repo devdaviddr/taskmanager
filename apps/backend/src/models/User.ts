@@ -83,4 +83,15 @@ export class UserModel {
 
     return result.rows[0] || null;
   }
+
+  static async delete(id: number): Promise<boolean> {
+    // Check if user owns any boards
+    const boardCheck = await pool.query('SELECT id FROM boards WHERE user_id = $1 LIMIT 1', [id]);
+    if (boardCheck.rows.length > 0) {
+      throw new Error('Cannot delete user who owns boards');
+    }
+
+    const result = await pool.query('DELETE FROM users WHERE id = $1', [id]);
+    return (result.rowCount ?? 0) > 0;
+  }
 }

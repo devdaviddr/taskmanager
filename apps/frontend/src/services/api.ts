@@ -109,6 +109,7 @@ export const usersAPI = {
 export const adminAPI = {
   getAllUsers: () => api.get('/admin/users'),
   updateUserDetails: (id: number, data: { role?: 'user' | 'admin' | 'superadmin'; name?: string; email?: string }) => api.put(`/admin/users/${id}`, data),
+  deleteUser: (id: number) => api.delete(`/admin/users/${id}`),
 }
 
 // Boards API

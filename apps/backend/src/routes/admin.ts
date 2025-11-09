@@ -57,4 +57,35 @@ adminRoutes.put('/users/:id', authMiddleware, requireAdmin, async (c: AppContext
   }
 })
 
+// Delete user (superadmin only)
+adminRoutes.delete('/users/:id', authMiddleware, requireAdmin, async (c: AppContext) => {
+  const userId = parseInt(c.req.param('id'))
+  if (isNaN(userId)) {
+    return c.json({ error: 'Invalid user ID' }, 400)
+  }
+
+  const currentUser = c.get('user')
+
+  // Only superadmins can delete users
+  if (currentUser.role !== 'superadmin') {
+    return c.json({ error: 'Insufficient permissions' }, 403)
+  }
+
+  // Prevent self-deletion
+  if (userId === currentUser.id) {
+    return c.json({ error: 'Cannot delete your own account' }, 400)
+  }
+
+  try {
+    await UserModel.delete(userId)
+    return c.json({ message: 'User deleted successfully' })
+  } catch (error) {
+    console.error('Error deleting user:', error)
+    if (error instanceof Error && error.message === 'Cannot delete user who owns boards') {
+      return c.json({ error: error.message }, 400)
+    }
+    return c.json({ error: 'Failed to delete user' }, 500)
+  }
+})
+
 export default adminRoutes;

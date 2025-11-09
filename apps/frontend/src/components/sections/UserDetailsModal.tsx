@@ -3,14 +3,15 @@ import Button from '../ui/Button'
 import Input from '../ui/Input'
 import Select from '../ui/Select'
 import ModalHeader from '../composites/ModalHeader'
+import { adminAPI } from '../../services/api'
 
 interface User {
   id: number
   email: string
   name?: string
   role: 'user' | 'admin' | 'superadmin'
-  created_at: string
-  updated_at: string
+  created_at?: string
+  updated_at?: string
 }
 
 interface UserDetailsModalProps {
@@ -18,10 +19,11 @@ interface UserDetailsModalProps {
   isOpen: boolean
   onClose: () => void
   onSave: (id: number, data: { role?: 'user' | 'admin' | 'superadmin'; name?: string; email?: string }) => Promise<void>
+  onDelete?: (id: number) => Promise<void>
   currentUser: User | null
 }
 
-export default function UserDetailsModal({ user, isOpen, onClose, onSave, currentUser }: UserDetailsModalProps) {
+export default function UserDetailsModal({ user, isOpen, onClose, onSave, onDelete, currentUser }: UserDetailsModalProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<'user' | 'admin' | 'superadmin'>('user')
@@ -43,6 +45,27 @@ export default function UserDetailsModal({ user, isOpen, onClose, onSave, curren
       onClose()
     } catch (error) {
       console.error('Failed to update user:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!user || !currentUser) return
+    if (!window.confirm(`Are you sure you want to delete ${user.name || user.email}? This action cannot be undone.`)) {
+      return
+    }
+    setIsLoading(true)
+    try {
+      if (onDelete) {
+        await onDelete(user.id)
+      } else {
+        await adminAPI.deleteUser(user.id)
+      }
+      onClose()
+    } catch (error) {
+      console.error('Failed to delete user:', error)
+      alert('Failed to delete user. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -102,6 +125,11 @@ export default function UserDetailsModal({ user, isOpen, onClose, onSave, curren
           </div>
         </div>
         <div className="flex justify-end space-x-2 mt-6">
+          {currentUser?.role === 'superadmin' && user.id !== currentUser.id && (
+            <Button onClick={handleDelete} disabled={isLoading} variant="danger">
+              Delete User
+            </Button>
+          )}
           <Button onClick={onClose} variant="secondary">
             Cancel
           </Button>

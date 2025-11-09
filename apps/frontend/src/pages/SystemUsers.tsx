@@ -49,6 +49,16 @@ export default function SystemUsers() {
     }
   }
 
+  const handleDeleteUser = async (id: number) => {
+    try {
+      await adminAPI.deleteUser(id)
+      await loadUsers()
+    } catch (error) {
+      console.error('Failed to delete user:', error)
+      throw error
+    }
+  }
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'superadmin': return 'bg-red-100 text-red-800'
@@ -140,6 +150,7 @@ export default function SystemUsers() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSave={handleSaveUser}
+        onDelete={handleDeleteUser}
         currentUser={currentUser}
       />
     </div>
