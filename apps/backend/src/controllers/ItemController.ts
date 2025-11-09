@@ -91,6 +91,26 @@ export class ItemController {
     }
   }
 
+  static async move(c: Context) {
+    try {
+      const id = parseInt(c.req.param('id'));
+      if (isNaN(id)) {
+        return c.json({ error: 'Invalid item ID' }, 400);
+      }
+
+      const body: MoveItemRequest = await c.req.json();
+
+      const item = await ItemService.moveItem(id, body);
+      return c.json(item);
+    } catch (error) {
+      console.error('Controller error - move item:', error);
+      if (error instanceof Error && (error.message === 'Item not found' || error.message.includes('Validation error'))) {
+        return c.json({ error: error.message }, error.message === 'Item not found' ? 404 : 400);
+      }
+      return c.json({ error: 'Internal server error' }, 500);
+    }
+  }
+
   static async delete(c: Context) {
     try {
       const id = parseInt(c.req.param('id'));
@@ -130,27 +150,48 @@ export class ItemController {
     }
   }
 
-  static async move(c: Context) {
+  static async assignUser(c: Context) {
     try {
-      const id = parseInt(c.req.param('id'));
-      if (isNaN(id)) {
+      const itemId = parseInt(c.req.param('id'));
+      if (isNaN(itemId)) {
         return c.json({ error: 'Invalid item ID' }, 400);
       }
 
-      const body: MoveItemRequest = await c.req.json();
-
-      if (typeof body.column_id !== 'number' || typeof body.position !== 'number' || body.position < 0) {
-        return c.json({ error: 'Invalid move data' }, 400);
+      const body = await c.req.json();
+      const userId = body.user_id;
+      if (typeof userId !== 'number') {
+        return c.json({ error: 'Invalid user ID' }, 400);
       }
 
-      const item = await ItemService.moveItem(id, body);
-      return c.json(item);
+      const success = await ItemService.assignUserToItem(itemId, userId);
+      if (!success) {
+        return c.json({ error: 'Failed to assign user' }, 500);
+      }
+
+      return c.json({ message: 'User assigned successfully' });
     } catch (error) {
-      console.error('Controller error - move item:', error);
-      if (error instanceof Error && error.message === 'Item not found') {
-        return c.json({ error: error.message }, 404);
-      }
+      console.error('Controller error - assign user to item:', error);
       return c.json({ error: 'Internal server error' }, 500);
     }
   }
-}
+
+  static async removeUser(c: Context) {
+    try {
+      const itemId = parseInt(c.req.param('id'));
+      const userId = parseInt(c.req.param('userId'));
+      if (isNaN(itemId) || isNaN(userId)) {
+        return c.json({ error: 'Invalid IDs' }, 400);
+      }
+
+      const success = await ItemService.removeUserFromItem(itemId, userId);
+      if (!success) {
+        return c.json({ error: 'User not assigned to item' }, 404);
+      }
+
+       return c.json({ message: 'User removed successfully' });
+     } catch (error) {
+       console.error('Controller error - remove user from item:', error);
+       return c.json({ error: 'Internal server error' }, 500);
+     }
+   }
+ }

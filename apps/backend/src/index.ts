@@ -1,14 +1,19 @@
+import 'dotenv/config';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serve } from '@hono/node-server';
 import { testConnection } from './config/database';
 import routes from './routes';
 import { errorHandler, logger } from './middleware';
+import { AuthService } from './services/AuthService';
 
 const app = new Hono();
 
 // CORS middleware
-app.use('*', cors());
+app.use('*', cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'], // Allow frontend origins
+  credentials: true, // Allow cookies to be sent
+}));
 
 // Middleware
 app.use('*', errorHandler);
@@ -33,6 +38,15 @@ async function startServer() {
     console.log(`🚀 Server is running on http://localhost:${info.port}`);
     console.log(`📚 API Documentation available at http://localhost:${info.port}`);
   });
+
+  // Start token cleanup interval (run every hour)
+  setInterval(async () => {
+    try {
+      await AuthService.cleanupExpiredTokens();
+    } catch (error) {
+      console.error('Error during token cleanup:', error);
+    }
+  }, 60 * 60 * 1000); // 1 hour
 }
 
 startServer();

@@ -1,8 +1,36 @@
 import { pool } from './config/database';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+
+console.log('DATABASE_URL:', process.env.DATABASE_URL);
 
 async function runMigrations() {
   try {
     console.log('Running database migrations...');
+
+    // Create users table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        name VARCHAR(255),
+        role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'superadmin')),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `);
+
+    // Add role column to existing users table if it doesn't exist
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'superadmin'));
+    `);
+
+    // Create index on email
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);`);
 
     // Create tags table
     await pool.query(`
@@ -24,11 +52,54 @@ async function runMigrations() {
       );
     `);
 
-    // Create indexes
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tags_created_at ON tags(created_at DESC);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_item_tags_item_id ON item_tags(item_id);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_item_tags_tag_id ON item_tags(tag_id);`);
+    // Create item_users junction table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS item_users (
+        item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        PRIMARY KEY (item_id, user_id)
+      );
+    `);
+
+    // Create board_users junction table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS board_users (
+        board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role VARCHAR(20) DEFAULT 'member',
+        PRIMARY KEY (board_id, user_id)
+      );
+    `);
+
+    // Create invalidated_tokens table for token blacklisting
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS invalidated_tokens (
+        id SERIAL PRIMARY KEY,
+        token_hash VARCHAR(128) NOT NULL UNIQUE,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `);
+
+    // Create indexes for invalidated_tokens
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_invalidated_tokens_hash ON invalidated_tokens(token_hash);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_invalidated_tokens_expires_at ON invalidated_tokens(expires_at);`);
+
+    // Create refresh_tokens table for refresh token system
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash VARCHAR(128) NOT NULL UNIQUE,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `);
+
+    // Create indexes for refresh_tokens
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);`);
 
     console.log('✅ Migrations completed successfully');
   } catch (error) {

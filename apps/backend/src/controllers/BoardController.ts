@@ -5,8 +5,8 @@ import type { CreateBoardRequest, UpdateBoardRequest } from '../types';
 export class BoardController {
   static async getAll(c: Context) {
     try {
-      const userId = 1; // TODO: Get from authentication
-      const boards = await BoardService.getAllBoards(userId);
+      const user = c.get('user');
+      const boards = await BoardService.getAllBoards(user.id);
       return c.json(boards);
     } catch (error) {
       console.error('Controller error - getAll boards:', error);
@@ -52,9 +52,10 @@ export class BoardController {
 
   static async create(c: Context) {
     try {
+      const user = c.get('user');
       const body: CreateBoardRequest = await c.req.json();
 
-      const board = await BoardService.createBoard(body);
+      const board = await BoardService.createBoard(body, user.id);
       return c.json(board, 201);
     } catch (error) {
       console.error('Controller error - create board:', error);

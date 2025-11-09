@@ -13,6 +13,20 @@ CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed);
 -- Create index on created_at for ordering
 CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at DESC);
 
+-- Create users table
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  name VARCHAR(255),
+  role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'superadmin')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index on email for faster lookups
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
 -- Create boards table
 CREATE TABLE IF NOT EXISTS boards (
   id SERIAL PRIMARY KEY,
@@ -21,7 +35,7 @@ CREATE TABLE IF NOT EXISTS boards (
   background VARCHAR(255) DEFAULT 'bg-gray-50',
   column_theme VARCHAR(255) DEFAULT 'dark',
   archived BOOLEAN NOT NULL DEFAULT FALSE,
-  user_id INTEGER NOT NULL DEFAULT 1, -- Default user for now
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -71,6 +85,21 @@ CREATE TABLE IF NOT EXISTS item_tags (
   PRIMARY KEY (item_id, tag_id)
 );
 
+-- Create item_users junction table for many-to-many relationship
+CREATE TABLE IF NOT EXISTS item_users (
+  item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (item_id, user_id)
+);
+
+-- Create board_users junction table for board members
+CREATE TABLE IF NOT EXISTS board_users (
+  board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role VARCHAR(20) DEFAULT 'member', -- owner, member, etc.
+  PRIMARY KEY (board_id, user_id)
+);
+
 -- Indexes for tags table
 CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
 CREATE INDEX IF NOT EXISTS idx_tags_created_at ON tags(created_at DESC);
@@ -79,11 +108,39 @@ CREATE INDEX IF NOT EXISTS idx_tags_created_at ON tags(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_item_tags_item_id ON item_tags(item_id);
 CREATE INDEX IF NOT EXISTS idx_item_tags_tag_id ON item_tags(tag_id);
 
--- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_boards_user_id ON boards(user_id);
-CREATE INDEX IF NOT EXISTS idx_boards_created_at ON boards(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_boards_archived ON boards(archived);
-CREATE INDEX IF NOT EXISTS idx_columns_board_id ON columns(board_id);
-CREATE INDEX IF NOT EXISTS idx_columns_position ON columns(board_id, position);
-CREATE INDEX IF NOT EXISTS idx_items_column_id ON items(column_id);
-CREATE INDEX IF NOT EXISTS idx_items_position ON items(column_id, position);
+-- Indexes for item_users junction table
+CREATE INDEX IF NOT EXISTS idx_item_users_item_id ON item_users(item_id);
+CREATE INDEX IF NOT EXISTS idx_item_users_user_id ON item_users(user_id);
+
+-- Indexes for board_users junction table
+CREATE INDEX IF NOT EXISTS idx_board_users_board_id ON board_users(board_id);
+CREATE INDEX IF NOT EXISTS idx_board_users_user_id ON board_users(user_id);
+
+-- Create invalidated_tokens table for token blacklisting
+CREATE TABLE IF NOT EXISTS invalidated_tokens (
+  id SERIAL PRIMARY KEY,
+  token_hash VARCHAR(128) NOT NULL UNIQUE,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index on token_hash for fast lookups
+CREATE INDEX IF NOT EXISTS idx_invalidated_tokens_hash ON invalidated_tokens(token_hash);
+-- Create index on expires_at for cleanup
+CREATE INDEX IF NOT EXISTS idx_invalidated_tokens_expires_at ON invalidated_tokens(expires_at);
+
+-- Create refresh_tokens table for refresh token system
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash VARCHAR(128) NOT NULL UNIQUE,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index on user_id for fast lookups
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+-- Create index on token_hash for fast validation
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);
+-- Create index on expires_at for cleanup
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);

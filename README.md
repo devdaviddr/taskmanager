@@ -5,7 +5,7 @@ A modern, full-stack task management application built with React, TypeScript, N
 ## 🚀 Features
 
 ### Core Functionality
-- **User Authentication**: Microsoft-style login/signup with secure session management
+- **JWT Authentication**: Secure login/signup with HttpOnly cookies and automatic token refresh
 - **Dashboard**: Overview of all user boards with quick access and statistics
 - **Kanban Boards**: Drag-and-drop interface for organizing tasks into columns
 - **Board Management**: Create and manage multiple project boards with customizable settings
@@ -149,7 +149,66 @@ http://localhost:3001
 ```
 
 ### Authentication
-Currently uses session-based authentication (to be enhanced with JWT).
+Uses JWT-based authentication with HttpOnly cookies for security. Features automatic token refresh and secure logout with token blacklisting.
+
+### User Roles & Permissions
+The application implements a hierarchical role-based access control system:
+
+- **User**: Default role for all registered users. Can create and manage their own boards and tasks.
+- **Admin**: Can manage users within the system. Has access to user management features and can modify user roles (except superadmin).
+- **Superadmin**: Full system access. Can promote/demote any user to any role including superadmin.
+
+Role hierarchy: `user` < `admin` < `superadmin`
+
+#### Role-Based Features
+- **Settings > Administration**: Admin and superadmin users can access user management interface
+- **User Role Management**: Admins can view all users and modify roles (with restrictions)
+- **API Endpoints**: Admin-only endpoints for user management operations
+
+**Note**: Board-specific roles (owner, member) are separate from global user roles and control access within individual boards.
+
+#### Authentication Endpoints
+
+**Register User**
+```http
+POST /auth/register
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "securepassword",
+  "name": "John Doe"
+}
+```
+
+**Login User**
+```http
+POST /auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "securepassword"
+}
+```
+
+**Get Current User**
+```http
+GET /auth/me
+Authorization: Bearer <token> (via HttpOnly cookie)
+```
+
+**Refresh Token**
+```http
+POST /auth/refresh
+Authorization: Bearer <refresh_token> (via HttpOnly cookie)
+```
+
+**Logout User**
+```http
+POST /auth/logout
+Authorization: Bearer <token> (via HttpOnly cookie)
+```
 
 ### Endpoints
 
@@ -312,14 +371,67 @@ Content-Type: application/json
 DELETE /tags/:id
 ```
 
+#### Admin API (Admin/Superadmin Only)
+
+**Get All Users**
+```http
+GET /admin/users
+Authorization: Required (Admin+)
+```
+
+**Update User Role**
+```http
+PUT /admin/users/:id/role
+Authorization: Required (Admin+)
+Content-Type: application/json
+
+{
+  "role": "admin"
+}
+```
+
 ### Response Format
 Standard responses include success/error status, data, and timestamps. Refer to backend route handlers for detailed schemas.
 
 ## 🗄 Database Schema
 
-The application uses PostgreSQL with a normalized schema supporting boards, columns, items (cards), and tags. See `erd.mermaid` for the entity-relationship diagram.
+The application uses PostgreSQL with a normalized schema supporting user authentication, boards, columns, items (cards), and tags. See `erd.mermaid` for the entity-relationship diagram and `auth-flow.mermaid` for the authentication flow diagram.
 
 ### Key Tables
+
+#### Users
+```sql
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  name VARCHAR(255),
+  role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'superadmin')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+#### Refresh Tokens
+```sql
+CREATE TABLE refresh_tokens (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash VARCHAR(64) NOT NULL UNIQUE,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+#### Invalidated Tokens
+```sql
+CREATE TABLE invalidated_tokens (
+  id SERIAL PRIMARY KEY,
+  token_hash VARCHAR(64) NOT NULL UNIQUE,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
 
 #### Boards
 ```sql

@@ -3,13 +3,14 @@ import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
-interface LoginForm {
+interface RegisterForm {
   email: string;
   password: string;
+  name: string;
 }
 
-export default function Login() {
-  const { login, isAuthenticated, loading } = useAuth();
+export default function Register() {
+  const { register: registerUser, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [loadingForm, setLoadingForm] = useState(false);
@@ -24,17 +25,17 @@ export default function Login() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginForm>();
+  } = useForm<RegisterForm>();
 
-  const onSubmit = async (data: LoginForm) => {
+  const onSubmit = async (data: RegisterForm) => {
     setLoadingForm(true);
     setError('');
     try {
-      await login(data.email, data.password);
+      await registerUser(data.email, data.password, data.name);
       navigate('/app/dashboard');
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } } };
-      setError(error.response?.data?.error || 'Login failed');
+      setError(error.response?.data?.error || 'Registration failed');
     } finally {
       setLoadingForm(false);
     }
@@ -54,18 +55,32 @@ export default function Login() {
         <div>
           <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-600">
             <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            TaskManager
+            Create Account
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Sign in to manage your tasks
+            Sign up to start managing your tasks
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                Name
+              </label>
+              <input
+                {...register('name', { required: 'Name is required' })}
+                type="text"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your name"
+              />
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+              )}
+            </div>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email
@@ -91,7 +106,13 @@ export default function Login() {
                 Password
               </label>
               <input
-                {...register('password', { required: 'Password is required' })}
+                {...register('password', {
+                  required: 'Password is required',
+                  minLength: {
+                    value: 6,
+                    message: 'Password must be at least 6 characters',
+                  },
+                })}
                 type="password"
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter your password"
@@ -112,15 +133,15 @@ export default function Login() {
               disabled={loadingForm}
               className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              {loadingForm ? 'Signing in...' : 'Sign in'}
+              {loadingForm ? 'Creating account...' : 'Sign up'}
             </button>
           </div>
 
           <div className="text-center">
             <p className="text-sm text-gray-500">
-              Don't have an account?{' '}
-              <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
-                Sign up
+              Already have an account?{' '}
+              <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+                Sign in
               </Link>
             </p>
           </div>

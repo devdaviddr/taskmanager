@@ -1,0 +1,87 @@
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant B as Backend
+    participant DB as Database
+
+    %% Initial Login Flow
+    rect rgb(240, 248, 255)
+        Note over U,DB: Initial Login Flow
+        U->>F: Enter credentials
+        F->>B: POST /auth/login
+        B->>DB: Verify user & password
+        DB-->>B: User data
+        B->>B: Generate JWT + Refresh Token
+        B->>DB: Store hashed refresh token
+        B-->>F: Set HttpOnly cookies (accessToken, refreshToken)
+        F-->>U: Redirect to dashboard
+    end
+
+    %% Automatic Token Refresh Flow
+    rect rgb(255, 248, 220)
+        Note over F,DB: Automatic Token Refresh (every 55 minutes)
+        F->>F: Timer triggers (5 min before expiry)
+        F->>B: POST /auth/refresh
+        B->>DB: Validate refresh token hash
+        DB-->>B: User data
+        B->>B: Generate new JWT + Refresh Token
+        B->>DB: Store new hashed refresh token
+        B->>DB: Invalidate old refresh token
+        B-->>F: Set new HttpOnly cookies
+        F->>F: Update token expiry timer
+    end
+
+    %% API Request with Token Refresh
+    rect rgb(248, 255, 248)
+        Note over F,DB: API Request with Automatic Refresh
+        F->>B: API request with expired token
+        B->>B: Verify token (fails)
+        B-->>F: 401 Unauthorized
+        F->>F: Queue pending requests
+        F->>B: POST /auth/refresh (automatic)
+        B->>DB: Validate refresh token
+        DB-->>B: User data
+        B->>B: Generate new tokens
+        B->>DB: Store new refresh token
+        B-->>F: Set new cookies
+        F->>B: Retry original API request
+        B->>DB: Process request
+        DB-->>B: Response data
+        B-->>F: API response
+        F->>F: Process queued requests
+    end
+
+    %% Logout Flow
+    rect rgb(255, 240, 240)
+        Note over U,DB: Logout Flow
+        U->>F: Click logout
+        F->>B: POST /auth/logout
+        B->>DB: Hash access token
+        B->>DB: Store in invalidated_tokens
+        B->>DB: Delete user's refresh tokens
+        B-->>F: Clear cookies
+        F->>F: Clear timers & state
+        F-->>U: Redirect to login
+    end
+
+    %% Token Blacklist Check
+    rect rgb(255, 255, 240)
+        Note over B,DB: Token Validation Flow
+        B->>B: Receive request with token
+        B->>DB: Check if token hash in invalidated_tokens
+        alt Token is blacklisted
+            DB-->>B: Found (blacklisted)
+            B-->>F: 401 Token invalidated
+        else Token is valid
+            DB-->>B: Not found (valid)
+            B->>DB: Process request
+        end
+    end
+
+    %% Background Cleanup
+    rect rgb(200, 255, 200)
+        Note over B,DB: Background Token Cleanup
+        B->>B: Hourly cleanup timer
+        B->>DB: Delete expired refresh_tokens
+        B->>DB: Delete expired invalidated_tokens
+    end

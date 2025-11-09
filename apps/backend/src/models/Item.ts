@@ -6,20 +6,34 @@ export class ItemModel {
     const result = await pool.query(`
       SELECT
         i.id, i.column_id, i.title, i.description, i.position, i.start_date, i.end_date, i.effort, i.label, i.priority, i.archived, i.created_at, i.updated_at,
-        COALESCE(json_agg(
-          json_build_object(
-            'id', t.id,
-            'name', t.name,
-            'color', t.color,
-            'created_at', t.created_at,
-            'updated_at', t.updated_at
+        COALESCE((
+          SELECT json_agg(
+            json_build_object(
+              'id', t.id,
+              'name', t.name,
+              'color', t.color,
+              'created_at', t.created_at,
+              'updated_at', t.updated_at
+            )
           )
-        ) FILTER (WHERE t.id IS NOT NULL), '[]'::json) as tags
+          FROM item_tags it
+          LEFT JOIN tags t ON it.tag_id = t.id
+          WHERE it.item_id = i.id
+        ), '[]'::json) as tags,
+        COALESCE((
+          SELECT json_agg(
+            json_build_object(
+              'id', u.id,
+              'email', u.email,
+              'name', u.name
+            )
+          )
+          FROM item_users iu
+          LEFT JOIN users u ON iu.user_id = u.id
+          WHERE iu.item_id = i.id
+        ), '[]'::json) as assigned_users
       FROM items i
-      LEFT JOIN item_tags it ON i.id = it.item_id
-      LEFT JOIN tags t ON it.tag_id = t.id
       WHERE i.column_id = $1 AND i.archived = FALSE
-      GROUP BY i.id
       ORDER BY i.position
     `, [columnId]);
     return result.rows;
@@ -29,20 +43,34 @@ export class ItemModel {
     const result = await pool.query(`
       SELECT
         i.id, i.column_id, i.title, i.description, i.position, i.start_date, i.end_date, i.effort, i.label, i.priority, i.archived, i.created_at, i.updated_at,
-        COALESCE(json_agg(
-          json_build_object(
-            'id', t.id,
-            'name', t.name,
-            'color', t.color,
-            'created_at', t.created_at,
-            'updated_at', t.updated_at
+        COALESCE((
+          SELECT json_agg(
+            json_build_object(
+              'id', t.id,
+              'name', t.name,
+              'color', t.color,
+              'created_at', t.created_at,
+              'updated_at', t.updated_at
+            )
           )
-        ) FILTER (WHERE t.id IS NOT NULL), '[]'::json) as tags
+          FROM item_tags it
+          LEFT JOIN tags t ON it.tag_id = t.id
+          WHERE it.item_id = i.id
+        ), '[]'::json) as tags,
+        COALESCE((
+          SELECT json_agg(
+            json_build_object(
+              'id', u.id,
+              'email', u.email,
+              'name', u.name
+            )
+          )
+          FROM item_users iu
+          LEFT JOIN users u ON iu.user_id = u.id
+          WHERE iu.item_id = i.id
+        ), '[]'::json) as assigned_users
       FROM items i
-      LEFT JOIN item_tags it ON i.id = it.item_id
-      LEFT JOIN tags t ON it.tag_id = t.id
       WHERE i.id = $1
-      GROUP BY i.id
     `, [id]);
     return result.rows[0] || null;
   }
@@ -70,15 +98,25 @@ export class ItemModel {
 
       const item = result.rows[0];
 
-      // Handle tags if provided
-      if (itemData.tag_ids && itemData.tag_ids.length > 0) {
-        const tagValues = itemData.tag_ids.map((tagId, index) => `($1, $${index + 2})`).join(', ');
-        const tagParams = [item.id, ...itemData.tag_ids];
-        await client.query(`
-          INSERT INTO item_tags (item_id, tag_id)
-          VALUES ${tagValues}
-        `, tagParams);
-      }
+       // Handle tags if provided
+       if (itemData.tag_ids && itemData.tag_ids.length > 0) {
+         const tagValues = itemData.tag_ids.map((tagId, index) => `($1, $${index + 2})`).join(', ');
+         const tagParams = [item.id, ...itemData.tag_ids];
+         await client.query(`
+           INSERT INTO item_tags (item_id, tag_id)
+           VALUES ${tagValues}
+         `, tagParams);
+       }
+
+       // Handle users if provided
+       if (itemData.user_ids && itemData.user_ids.length > 0) {
+         const userValues = itemData.user_ids.map((userId, index) => `($1, $${index + 2})`).join(', ');
+         const userParams = [item.id, ...itemData.user_ids];
+         await client.query(`
+           INSERT INTO item_users (item_id, user_id)
+           VALUES ${userValues}
+         `, userParams);
+       }
 
       await client.query('COMMIT');
 
@@ -97,6 +135,13 @@ export class ItemModel {
 
     try {
       await client.query('BEGIN');
+
+      // Check if item exists and lock it for update
+      const existingItem = await client.query('SELECT id FROM items WHERE id = $1 FOR UPDATE', [id]);
+      if (existingItem.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return null;
+      }
 
       const fields = [];
       const values = [];
@@ -162,21 +207,44 @@ export class ItemModel {
         `, values);
       }
 
-      // Handle tags if provided
-      if (itemData.tag_ids !== undefined) {
-        // Remove all existing tags for this item
-        await client.query('DELETE FROM item_tags WHERE item_id = $1', [id]);
+       // Handle tags if provided
+       if (itemData.tag_ids !== undefined) {
+         // Remove all existing tags for this item
+         await client.query('DELETE FROM item_tags WHERE item_id = $1', [id]);
 
-        // Add new tags if any
-        if (itemData.tag_ids.length > 0) {
-          const tagValues = itemData.tag_ids.map((tagId, index) => `($1, $${index + 2})`).join(', ');
-          const tagParams = [id, ...itemData.tag_ids];
-          await client.query(`
-            INSERT INTO item_tags (item_id, tag_id)
-            VALUES ${tagValues}
-          `, tagParams);
+         // Add new tags if any
+         if (itemData.tag_ids.length > 0) {
+           const tagValues = itemData.tag_ids.map((tagId, index) => `($1, $${index + 2})`).join(', ');
+           const tagParams = [id, ...itemData.tag_ids];
+           await client.query(`
+             INSERT INTO item_tags (item_id, tag_id)
+             VALUES ${tagValues}
+           `, tagParams);
+         }
+       }
+
+        // Handle users if provided
+        if (itemData.user_ids !== undefined) {
+          // Remove all existing users for this item
+          await client.query('DELETE FROM item_users WHERE item_id = $1', [id]);
+
+          // Add new users if any
+          if (itemData.user_ids.length > 0) {
+            // Check which users exist
+            const existingUsers = await client.query('SELECT id FROM users WHERE id = ANY($1)', [itemData.user_ids]);
+            const existingIds = existingUsers.rows.map(row => row.id);
+            const validUserIds = itemData.user_ids.filter(id => existingIds.includes(id));
+
+            if (validUserIds.length > 0) {
+              const userValues = validUserIds.map((userId, index) => `($1, $${index + 2})`).join(', ');
+              const userParams = [id, ...validUserIds];
+              await client.query(`
+                INSERT INTO item_users (item_id, user_id)
+                VALUES ${userValues}
+              `, userParams);
+            }
+          }
         }
-      }
 
       await client.query('COMMIT');
 
@@ -211,17 +279,31 @@ export class ItemModel {
     return await this.findById(id);
   }
 
-  static async moveItem(id: number, moveData: MoveItemRequest): Promise<Item | null> {
+  static async assignUser(itemId: number, userId: number): Promise<boolean> {
+    const result = await pool.query(`
+      INSERT INTO item_users (item_id, user_id)
+      VALUES ($1, $2)
+      ON CONFLICT (item_id, user_id) DO NOTHING
+    `, [itemId, userId]);
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  static async removeUser(itemId: number, userId: number): Promise<boolean> {
+    const result = await pool.query(`
+      DELETE FROM item_users
+      WHERE item_id = $1 AND user_id = $2
+    `, [itemId, userId]);
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  static async move(id: number, moveData: MoveItemRequest): Promise<Item | null> {
     const client = await pool.connect();
 
     try {
       await client.query('BEGIN');
 
-      // Get current item
-      const currentItem = await client.query(`
-        SELECT column_id, position FROM items WHERE id = $1
-      `, [id]);
-
+      // Get current item info
+      const currentItem = await client.query('SELECT id, column_id, position FROM items WHERE id = $1', [id]);
       if (currentItem.rows.length === 0) {
         await client.query('ROLLBACK');
         return null;
@@ -239,7 +321,7 @@ export class ItemModel {
             SET position = position - 1
             WHERE column_id = $1 AND position > $2 AND position <= $3
           `, [oldColumnId, oldPosition, newPosition]);
-        } else {
+        } else if (newPosition < oldPosition) {
           // Moving up: shift items between new and old position down
           await client.query(`
             UPDATE items
@@ -247,16 +329,17 @@ export class ItemModel {
             WHERE column_id = $1 AND position >= $2 AND position < $3
           `, [oldColumnId, newPosition, oldPosition]);
         }
+        // If same position, do nothing
       } else {
         // Moving to a different column
-        // Shift items in old column up
+        // 1. Shift items in old column down to fill the gap
         await client.query(`
           UPDATE items
           SET position = position - 1
           WHERE column_id = $1 AND position > $2
         `, [oldColumnId, oldPosition]);
 
-        // Shift items in new column down
+        // 2. Shift items in new column up to make space
         await client.query(`
           UPDATE items
           SET position = position + 1

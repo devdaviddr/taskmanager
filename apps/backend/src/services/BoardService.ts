@@ -43,12 +43,12 @@ export class BoardService {
     }
   }
 
-  static async createBoard(boardData: CreateBoardRequest): Promise<Board> {
+  static async createBoard(boardData: CreateBoardRequest, userId: number): Promise<Board> {
     try {
       // Business logic validation
       this.validateCreateBoardData(boardData);
 
-      return await BoardModel.create(boardData);
+      return await BoardModel.create(boardData, userId);
     } catch (error) {
       console.error('Service error - createBoard:', error);
       if (error instanceof Error && error.message.includes('validation')) {

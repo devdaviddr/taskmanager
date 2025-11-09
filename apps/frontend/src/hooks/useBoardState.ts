@@ -1,5 +1,11 @@
 import { useState } from 'react'
 
+interface User {
+  id: number
+  email: string
+  name?: string
+}
+
 interface Item {
   id: number
   column_id: number
@@ -12,6 +18,7 @@ interface Item {
   label?: string
   priority?: 'high' | 'medium' | 'low'
   tags?: Tag[]
+  assigned_users?: User[]
   archived: boolean
   created_at: string
   updated_at: string
@@ -37,6 +44,7 @@ export function useBoardState() {
   const [editLabel, setEditLabel] = useState('')
   const [editPriority, setEditPriority] = useState('')
   const [editTags, setEditTags] = useState<Tag[]>([])
+  const [editUsers, setEditUsers] = useState<User[]>([])
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
   const [editBackground, setEditBackground] = useState('')
   const [editColumnTheme, setEditColumnTheme] = useState('')
@@ -64,6 +72,7 @@ export function useBoardState() {
     setEditLabel('')
     setEditPriority('')
     setEditTags([])
+    setEditUsers([])
   }
 
   const handleCloseSettings = () => {
@@ -93,6 +102,8 @@ export function useBoardState() {
     setEditPriority,
     editTags,
     setEditTags,
+    editUsers,
+    setEditUsers,
     isSettingsModalOpen,
     setIsSettingsModalOpen,
     editBackground,

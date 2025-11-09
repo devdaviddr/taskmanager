@@ -65,6 +65,21 @@ export class BoardModel {
                   WHERE it2.item_id = i.id
                 ),
                 '[]'::json
+              ),
+              'assigned_users', COALESCE(
+                (
+                  SELECT json_agg(
+                    json_build_object(
+                      'id', u.id,
+                      'email', u.email,
+                      'name', u.name
+                    )
+                  )
+                  FROM item_users iu2
+                  JOIN users u ON iu2.user_id = u.id
+                  WHERE iu2.item_id = i.id
+                ),
+                '[]'::json
               )
             ) ORDER BY i.position
           ) FILTER (WHERE i.id IS NOT NULL AND i.archived = FALSE),
@@ -83,12 +98,12 @@ export class BoardModel {
     };
   }
 
-  static async create(boardData: CreateBoardRequest): Promise<Board> {
+  static async create(boardData: CreateBoardRequest, userId: number): Promise<Board> {
     const result = await pool.query(`
       INSERT INTO boards (name, description, background, column_theme, archived, user_id, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, 1, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
       RETURNING id, name, description, background, column_theme, archived, user_id, created_at, updated_at
-    `, [boardData.name, boardData.description || null, boardData.background || 'bg-gray-50', boardData.column_theme || 'dark', boardData.archived || false]);
+    `, [boardData.name, boardData.description || null, boardData.background || 'bg-gray-50', boardData.column_theme || 'dark', boardData.archived || false, userId]);
     return result.rows[0];
   }
 

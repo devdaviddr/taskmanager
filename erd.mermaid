@@ -1,8 +1,38 @@
 erDiagram
+    USERS ||--o{ BOARDS : "owns"
+    USERS ||--o{ ITEM_USERS : "assigned to"
+    USERS ||--o{ REFRESH_TOKENS : "has"
     BOARDS ||--o{ COLUMNS : "has"
+    BOARDS ||--o{ BOARD_USERS : "has members"
     COLUMNS ||--o{ ITEMS : "has"
     ITEMS ||--o{ ITEM_TAGS : "has"
+    ITEMS ||--o{ ITEM_USERS : "assigned to"
     TAGS ||--o{ ITEM_TAGS : "belongs to"
+
+    USERS {
+        int id PK
+        varchar(255) email UK
+        varchar(255) password_hash
+        varchar(255) name
+        varchar(20) role
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    REFRESH_TOKENS {
+        int id PK
+        int user_id FK
+        varchar(64) token_hash UK
+        timestamp expires_at
+        timestamp created_at
+    }
+
+    INVALIDATED_TOKENS {
+        int id PK
+        varchar(64) token_hash UK
+        timestamp expires_at
+        timestamp created_at
+    }
 
     BOARDS {
         int id PK
@@ -11,7 +41,7 @@ erDiagram
         varchar(255) background
         varchar(255) column_theme
         boolean archived
-        int user_id
+        int user_id FK
         timestamp created_at
         timestamp updated_at
     }
@@ -43,7 +73,7 @@ erDiagram
 
     TAGS {
         int id PK
-        varchar(50) name
+        varchar(50) name UK
         varchar(7) color
         timestamp created_at
         timestamp updated_at
@@ -52,4 +82,15 @@ erDiagram
     ITEM_TAGS {
         int item_id FK
         int tag_id FK
+    }
+
+    ITEM_USERS {
+        int item_id FK
+        int user_id FK
+    }
+
+    BOARD_USERS {
+        int board_id FK
+        int user_id FK
+        varchar(20) role
     }

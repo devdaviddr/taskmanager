@@ -24,6 +24,40 @@ export interface HealthResponse {
   timestamp: string;
 }
 
+// User types
+export interface User {
+  id: number;
+  email: string;
+  password_hash: string;
+  name?: string;
+  role: 'user' | 'admin' | 'superadmin';
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface CreateUserRequest {
+  email: string;
+  password: string;
+  name?: string;
+}
+
+export interface UpdateUserRequest {
+  name?: string;
+  email?: string;
+  role?: 'user' | 'admin' | 'superadmin';
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  user: Omit<User, 'password_hash'>;
+  token: string;
+  refreshToken: string;
+}
+
 // New types for boards feature
 export interface Board {
   id: number;
@@ -74,6 +108,7 @@ export interface Item {
   label?: string;
   priority?: 'high' | 'medium' | 'low' | null;
   tags?: Tag[];
+  assigned_users?: User[];
   archived: boolean;
   created_at: Date;
   updated_at: Date;
@@ -95,6 +130,20 @@ export interface CreateItemRequest {
   label?: string | null;
   priority?: 'high' | 'medium' | 'low' | null;
   tag_ids?: number[];
+  user_ids?: number[];
+}
+
+export interface UpdateItemRequest {
+  title?: string;
+  description?: string;
+  position?: number;
+  start_date?: Date;
+  end_date?: Date;
+  effort?: number;
+  label?: string | null;
+  priority?: 'high' | 'medium' | 'low' | null;
+  tag_ids?: number[];
+  user_ids?: number[];
 }
 
 export interface MoveItemRequest {
