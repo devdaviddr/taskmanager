@@ -1,6 +1,6 @@
 import type { Context } from 'hono';
 import { ItemService } from '../services/ItemService';
-import type { CreateItemRequest } from '../types';
+import type { CreateItemRequest, MoveItemRequest } from '../types';
 
 export class ItemController {
   static async get(c: Context) {
@@ -86,6 +86,26 @@ export class ItemController {
       console.error('Controller error - update item:', error);
       if (error instanceof Error && (error.message === 'Item not found or no changes made' || error.message.includes('Validation error'))) {
         return c.json({ error: error.message }, error.message === 'Item not found or no changes made' ? 404 : 400);
+      }
+      return c.json({ error: 'Internal server error' }, 500);
+    }
+  }
+
+  static async move(c: Context) {
+    try {
+      const id = parseInt(c.req.param('id'));
+      if (isNaN(id)) {
+        return c.json({ error: 'Invalid item ID' }, 400);
+      }
+
+      const body: MoveItemRequest = await c.req.json();
+
+      const item = await ItemService.moveItem(id, body);
+      return c.json(item);
+    } catch (error) {
+      console.error('Controller error - move item:', error);
+      if (error instanceof Error && (error.message === 'Item not found' || error.message.includes('Validation error'))) {
+        return c.json({ error: error.message }, error.message === 'Item not found' ? 404 : 400);
       }
       return c.json({ error: 'Internal server error' }, 500);
     }

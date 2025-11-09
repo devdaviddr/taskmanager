@@ -295,4 +295,75 @@ export class ItemModel {
     `, [itemId, userId]);
     return (result.rowCount ?? 0) > 0;
   }
+
+  static async move(id: number, moveData: MoveItemRequest): Promise<Item | null> {
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // Get current item info
+      const currentItem = await client.query('SELECT id, column_id, position FROM items WHERE id = $1', [id]);
+      if (currentItem.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return null;
+      }
+
+      const { column_id: oldColumnId, position: oldPosition } = currentItem.rows[0];
+      const { column_id: newColumnId, position: newPosition } = moveData;
+
+      if (oldColumnId === newColumnId) {
+        // Moving within the same column
+        if (newPosition > oldPosition) {
+          // Moving down: shift items between old and new position up
+          await client.query(`
+            UPDATE items
+            SET position = position - 1
+            WHERE column_id = $1 AND position > $2 AND position <= $3
+          `, [oldColumnId, oldPosition, newPosition]);
+        } else if (newPosition < oldPosition) {
+          // Moving up: shift items between new and old position down
+          await client.query(`
+            UPDATE items
+            SET position = position + 1
+            WHERE column_id = $1 AND position >= $2 AND position < $3
+          `, [oldColumnId, newPosition, oldPosition]);
+        }
+        // If same position, do nothing
+      } else {
+        // Moving to a different column
+        // 1. Shift items in old column down to fill the gap
+        await client.query(`
+          UPDATE items
+          SET position = position - 1
+          WHERE column_id = $1 AND position > $2
+        `, [oldColumnId, oldPosition]);
+
+        // 2. Shift items in new column up to make space
+        await client.query(`
+          UPDATE items
+          SET position = position + 1
+          WHERE column_id = $1 AND position >= $2
+        `, [newColumnId, newPosition]);
+      }
+
+      // Update the item
+      const result = await client.query(`
+        UPDATE items
+        SET column_id = $1, position = $2, updated_at = NOW()
+        WHERE id = $3
+        RETURNING id
+      `, [newColumnId, newPosition, id]);
+
+      await client.query('COMMIT');
+
+      // Fetch the complete item with tags
+      return await this.findById(id);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }

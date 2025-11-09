@@ -61,6 +61,25 @@ export class ItemService {
     }
   }
 
+  static async moveItem(id: number, moveData: MoveItemRequest): Promise<Item> {
+    try {
+      // Business logic validation
+      this.validateMoveItemData(moveData);
+
+      const item = await ItemModel.move(id, moveData);
+      if (!item) {
+        throw new Error('Item not found');
+      }
+      return item;
+    } catch (error) {
+      console.error('Service error - moveItem:', error);
+      if (error instanceof Error && (error.message === 'Item not found' || error.message.includes('Validation error'))) {
+        throw error;
+      }
+      throw new Error('Failed to move item');
+    }
+  }
+
   static async deleteItem(id: number): Promise<void> {
     try {
       const deleted = await ItemModel.delete(id);
@@ -217,6 +236,16 @@ export class ItemService {
 
     if (data.user_ids !== undefined && (!Array.isArray(data.user_ids) || !data.user_ids.every(id => typeof id === 'number'))) {
       throw new Error('Validation error: User IDs must be an array of numbers');
+    }
+  }
+
+  private static validateMoveItemData(data: MoveItemRequest): void {
+    if (typeof data.column_id !== 'number' || data.column_id <= 0) {
+      throw new Error('Validation error: Column ID must be a positive number');
+    }
+
+    if (typeof data.position !== 'number' || data.position < 0) {
+      throw new Error('Validation error: Position must be a non-negative number');
     }
   }
 }
