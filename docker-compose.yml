@@ -10,19 +10,34 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./apps/backend/src/schema/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
-    build: ./apps/backend
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile.dev
     ports:
       - "3001:3001"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
+      NODE_ENV: development
+      PORT: 3001
+      HOST: 0.0.0.0
       DATABASE_URL: postgresql://postgres:password@postgres:5432/taskmanager
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-this-in-production}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
       - ./apps/backend:/app
-    command: sh -c "npm install && npm run dev"
+      - /app/node_modules
+    command: npm run dev
+    restart: unless-stopped
 
   frontend:
     build: ./apps/frontend
@@ -31,11 +46,14 @@ services:
     depends_on:
       - backend
     environment:
+      NODE_ENV: development
       PORT: 5173
-      VITE_API_URL: http://localhost:3001
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
     volumes:
       - ./apps/frontend:/app
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+    restart: unless-stopped
 
 volumes:
   postgres_data:

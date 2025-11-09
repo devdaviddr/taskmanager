@@ -20,6 +20,7 @@
 - Class-based controllers with static methods, parameterized queries, connection pooling
 - Try-catch error handling with `console.error` logging, throw specific Error messages
 - Input validation in services, instanceof checks for error types
+- Production-ready with security headers, rate limiting, CORS, enhanced logging, graceful shutdown
 
 ### Frontend (React + Vite + Tailwind)
 - Function components with default exports, forwardRef for custom components
@@ -31,3 +32,5 @@
 ### Security & Best Practices
 - Input validation on client and server, parameterized queries to prevent SQL injection
 - Never commit secrets, use .env files, HTTPS in production, proper CORS config
+- Security headers (HSTS, CSP, X-Frame-Options), rate limiting, request timeouts
+- Environment-aware configuration, structured logging, graceful shutdown handling
