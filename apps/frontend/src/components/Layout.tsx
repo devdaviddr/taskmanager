@@ -7,7 +7,7 @@ export default function Layout() {
       <nav className="bg-white border-b border-gray-200 h-16">
         <div className="h-full px-4 sm:px-6 lg:px-8 flex items-center">
           <Link to="/app" className="text-xl font-bold text-gray-900">
-            TaskManager
+            Task Manager
           </Link>
         </div>
       </nav>
