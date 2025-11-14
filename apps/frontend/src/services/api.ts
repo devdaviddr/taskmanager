@@ -99,6 +99,11 @@ api.interceptors.response.use(
 // Legacy task API
 export const getHealth = () => api.get('/health')
 
+// Health API
+export const healthAPI = {
+  get: () => api.get('/health'),
+}
+
 // Users API
 export const usersAPI = {
   getAll: () => api.get('/users'),

@@ -252,7 +252,7 @@ export default function CardEditModal({
               placeholder="Type to add or create tag..."
             />
             {showTagDropdown && (
-              <div className="absolute z-[60] bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto w-full mt-1">
+              <div className="absolute z-[60] bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto w-full bottom-full mb-1">
                 {filteredTags.length > 0 ? (
                   filteredTags.map(tag => (
                     <div
@@ -292,7 +292,7 @@ export default function CardEditModal({
               placeholder="Type to search and assign users..."
             />
             {showUserDropdown && (
-              <div className="absolute z-[60] bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto w-full mt-1">
+              <div className="absolute z-[60] bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto w-full bottom-full mb-1">
                 {filteredUsers.length > 0 ? (
                   filteredUsers.map(user => (
                     <div

@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { PencilIcon } from '@heroicons/react/24/outline'
 import PageLayout from '../components/PageLayout'
 import PageHeader from '../components/PageHeader'
 import { boardsAPI } from '../services/api'
+import EditBoardModal from '../components/sections/EditBoardModal'
 
 interface Board {
   id: number
@@ -27,6 +29,10 @@ export default function Dashboard() {
   const [sortBy, setSortBy] = useState<'name' | 'created_at'>('created_at')
   const [showArchived, setShowArchived] = useState(false)
   const [menuOpen, setMenuOpen] = useState<number | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editingBoard, setEditingBoard] = useState<Board | null>(null)
+  const [editBoardName, setEditBoardName] = useState('')
+  const [editBoardDescription, setEditBoardDescription] = useState('')
 
   const { data: boards = [], isLoading, error } = useQuery({
     queryKey: ['boards'],
@@ -52,6 +58,10 @@ export default function Dashboard() {
     mutationFn: (id: number) => boardsAPI.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['boards'] })
+      setIsEditModalOpen(false)
+      setEditingBoard(null)
+      setEditBoardName('')
+      setEditBoardDescription('')
     },
   })
 
@@ -60,7 +70,23 @@ export default function Dashboard() {
       boardsAPI.create({ name, description }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['boards'] })
+      setIsEditModalOpen(false)
+      setEditingBoard(null)
+      setEditBoardName('')
+      setEditBoardDescription('')
       navigate(`/app/board/${data.data.id}`)
+    },
+  })
+
+  const updateBoardMutation = useMutation({
+    mutationFn: ({ id, name, description }: { id: number; name: string; description?: string }) =>
+      boardsAPI.update(id, { name, description }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['boards'] })
+      setIsEditModalOpen(false)
+      setEditingBoard(null)
+      setEditBoardName('')
+      setEditBoardDescription('')
     },
   })
 
@@ -93,14 +119,37 @@ export default function Dashboard() {
       name: newName,
       description: board.description,
     })
-    setMenuOpen(null)
   }
 
   const handleDeleteBoard = (board: Board) => {
     if (window.confirm(`Are you sure you want to delete "${board.name}"? This action cannot be undone.`)) {
       deleteBoardMutation.mutate(board.id)
     }
+  }
+
+  const handleEditBoard = (board: Board) => {
+    setEditingBoard(board)
+    setEditBoardName(board.name)
+    setEditBoardDescription(board.description || '')
+    setIsEditModalOpen(true)
     setMenuOpen(null)
+  }
+
+  const handleEditBoardSubmit = () => {
+    if (editingBoard && editBoardName.trim()) {
+      updateBoardMutation.mutate({
+        id: editingBoard.id,
+        name: editBoardName.trim(),
+        description: editBoardDescription.trim() || undefined,
+      })
+    }
+  }
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false)
+    setEditingBoard(null)
+    setEditBoardName('')
+    setEditBoardDescription('')
   }
 
   const filteredAndSortedBoards = boards
@@ -249,36 +298,21 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    {menuOpen === board.id && (
-                      <div className="absolute top-12 right-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-32">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDuplicateBoard(board)
-                          }}
-                          disabled={duplicateBoardMutation.isPending}
-                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center disabled:opacity-50"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                          {duplicateBoardMutation.isPending ? 'Duplicating...' : 'Duplicate'}
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteBoard(board)
-                          }}
-                          disabled={deleteBoardMutation.isPending}
-                          className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center disabled:opacity-50"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          {deleteBoardMutation.isPending ? 'Deleting...' : 'Delete'}
-                        </button>
-                      </div>
-                    )}
+                      {menuOpen === board.id && (
+                        <div className="absolute top-12 right-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-32">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditBoard(board)
+                            }}
+                            disabled={updateBoardMutation.isPending}
+                            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center disabled:opacity-50"
+                          >
+                            <PencilIcon className="w-4 h-4 mr-2" />
+                            {updateBoardMutation.isPending ? 'Editing...' : 'Edit'}
+                          </button>
+                        </div>
+                      )}
 
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-white/70 text-xs">
@@ -369,7 +403,7 @@ export default function Dashboard() {
                   onChange={(e) => setNewBoardName(e.target.value)}
                   placeholder="Enter board name"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  onKeyPress={(e) => e.key === 'Enter' && handleCreateBoardSubmit()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleCreateBoardSubmit()}
                 />
               </div>
 
@@ -405,6 +439,22 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Edit Board Modal */}
+      <EditBoardModal
+        isOpen={isEditModalOpen}
+        boardName={editBoardName}
+        boardDescription={editBoardDescription}
+        onNameChange={setEditBoardName}
+        onDescriptionChange={setEditBoardDescription}
+        onSave={handleEditBoardSubmit}
+        onClose={handleCloseEditModal}
+        savePending={updateBoardMutation.isPending}
+        onDuplicate={editingBoard ? () => handleDuplicateBoard(editingBoard) : undefined}
+        onDelete={editingBoard ? () => handleDeleteBoard(editingBoard) : undefined}
+        duplicatePending={duplicateBoardMutation.isPending}
+        deletePending={deleteBoardMutation.isPending}
+      />
     </PageLayout>
   )
 }

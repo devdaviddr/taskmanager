@@ -9,11 +9,11 @@ const SettingsLayout = () => {
 
   const baseTabs = [
     { name: 'Account', href: '/app/settings', current: location.pathname === '/app/settings' },
-    { name: 'Preferences', href: '/app/settings/preferences', current: location.pathname === '/app/settings/preferences' },
   ]
 
   const adminTabs = [
     { name: 'System Users', href: '/app/settings/system-users', current: location.pathname === '/app/settings/system-users' },
+    { name: 'System Health', href: '/app/settings/system-health', current: location.pathname === '/app/settings/system-health' },
   ]
 
   const tabs = user && (user.role === 'admin' || user.role === 'superadmin') ? [...baseTabs, ...adminTabs] : baseTabs
