@@ -101,6 +101,13 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);`);
 
+    // Update existing boards with NULL column_theme to 'light'
+    await pool.query(`
+      UPDATE boards
+      SET column_theme = 'light'
+      WHERE column_theme IS NULL;
+    `);
+
     console.log('✅ Migrations completed successfully');
   } catch (error) {
     console.error('❌ Migration failed:', error);

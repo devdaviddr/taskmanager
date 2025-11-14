@@ -103,7 +103,7 @@ export class BoardModel {
       INSERT INTO boards (name, description, background, column_theme, archived, user_id, created_at, updated_at)
       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
       RETURNING id, name, description, background, column_theme, archived, user_id, created_at, updated_at
-    `, [boardData.name, boardData.description || null, boardData.background || 'bg-gray-50', boardData.column_theme || 'dark', boardData.archived || false, userId]);
+    `, [boardData.name, boardData.description || null, boardData.background || 'bg-gray-50', boardData.column_theme || 'light', boardData.archived || false, userId]);
     return result.rows[0];
   }
 

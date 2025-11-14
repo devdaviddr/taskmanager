@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS boards (
   name VARCHAR(255) NOT NULL,
   description TEXT,
   background VARCHAR(255) DEFAULT 'bg-gray-50',
-  column_theme VARCHAR(255) DEFAULT 'dark',
+   column_theme VARCHAR(255) DEFAULT 'light',
   archived BOOLEAN NOT NULL DEFAULT FALSE,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

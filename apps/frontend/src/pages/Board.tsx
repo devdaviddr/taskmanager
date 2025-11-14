@@ -267,7 +267,7 @@ export default function BoardPage() {
   const handleOpenSettings = () => {
     boardState.setEditBoardName(board!.name)
     boardState.setEditBackground(board!.background || 'bg-gray-50')
-    boardState.setEditColumnTheme(board!.column_theme || 'dark')
+    boardState.setEditColumnTheme(board!.column_theme || 'light')
     boardState.setIsSettingsModalOpen(true)
   }
 
@@ -390,7 +390,7 @@ const handleCancelEditTag = () => {
                     <Column
                       key={column.id}
                       column={column}
-                      columnTheme={board?.column_theme || 'dark'}
+                      columnTheme={board?.column_theme || 'light'}
                       newItemTitle={boardState.newItemTitles[column.id] || ''}
                       onNewItemChange={(value) => boardState.setNewItemTitles(prev => ({ ...prev, [column.id]: value }))}
                       onCreateItem={() => handleCreateItem(column.id, boardState.newItemTitles[column.id] || '')}
