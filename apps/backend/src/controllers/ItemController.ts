@@ -1,7 +1,7 @@
 import type { Context } from 'hono';
 import { ItemService } from '../services/ItemService';
 import type { CreateItemRequest, MoveItemRequest } from '../types';
-import { checkBoardOwnershipViaItem } from '../utils/auth';
+import { checkBoardOwnershipViaItem, checkBoardOwnershipViaColumn, checkBoardAccessViaItem, checkBoardAccessViaColumn } from '../utils/auth';
 
 export class ItemController {
   static async get(c: Context) {
@@ -9,6 +9,23 @@ export class ItemController {
       const id = parseInt(c.req.param('id'));
       if (isNaN(id)) {
         return c.json({ error: 'Invalid item ID' }, 400);
+      }
+
+      const user = c.get('user');
+      
+      // Check board access via item (owner or assigned to tasks)
+      try {
+        await checkBoardAccessViaItem(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Item not found' || error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
       }
 
       const item = await ItemService.getItemById(id);
@@ -27,6 +44,23 @@ export class ItemController {
       const columnId = parseInt(c.req.param('columnId'));
       if (isNaN(columnId)) {
         return c.json({ error: 'Invalid column ID' }, 400);
+      }
+
+      const user = c.get('user');
+      
+      // Check board access via column (owner or assigned to tasks)
+      try {
+        await checkBoardAccessViaColumn(columnId, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Column not found' || error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
       }
 
       const items = await ItemService.getItemsByColumn(columnId);

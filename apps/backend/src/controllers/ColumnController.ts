@@ -1,7 +1,7 @@
 import type { Context } from 'hono';
 import { ColumnService } from '../services/ColumnService';
 import type { CreateColumnRequest } from '../types';
-import { checkBoardOwnershipViaColumn } from '../utils/auth';
+import { checkBoardOwnership, checkBoardOwnershipViaColumn, checkBoardAccess } from '../utils/auth';
 
 export class ColumnController {
   static async getByBoard(c: Context) {
@@ -9,6 +9,23 @@ export class ColumnController {
       const boardId = parseInt(c.req.param('boardId'));
       if (isNaN(boardId)) {
         return c.json({ error: 'Invalid board ID' }, 400);
+      }
+
+      const user = c.get('user');
+      
+      // Check board access (owner or assigned to tasks)
+      try {
+        await checkBoardAccess(boardId, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
       }
 
       const columns = await ColumnService.getColumnsByBoard(boardId);
