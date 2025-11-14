@@ -328,15 +328,17 @@ export default function BoardPage() {
     }
   }
 
-  const handleCreateTag = () => {
-    if (boardState.newTagName.trim()) {
-      mutations.createTagMutation.mutate({ name: boardState.newTagName.trim(), color: boardState.newTagColor }, {
+  const handleCreateTag = async (name: string, color: string) => {
+    return new Promise<void>((resolve, reject) => {
+      mutations.createTagMutation.mutate({ name, color }, {
         onSuccess: () => {
           boardState.setNewTagName('')
           boardState.setNewTagColor('#F3F4F6')
-        }
+          resolve()
+        },
+        onError: (error) => reject(error)
       })
-    }
+    })
   }
 
   const handleStartEditTag = (tag: Tag) => {
@@ -345,28 +347,33 @@ export default function BoardPage() {
     boardState.setEditTagColor(tag.color)
   }
 
-  const handleSaveEditTag = () => {
-    if (boardState.editingTagId && boardState.editTagName.trim()) {
-      mutations.updateTagMutation.mutate({ id: boardState.editingTagId, name: boardState.editTagName.trim(), color: boardState.editTagColor }, {
-      onSuccess: () => {
-        boardState.setEditingTagId(null)
-        boardState.setEditTagName('')
-        boardState.setEditTagColor('#F3F4F6')
-      }
+  const handleSaveEditTag = async (id: number, name: string, color: string) => {
+    return new Promise<void>((resolve, reject) => {
+      mutations.updateTagMutation.mutate({ id, name, color }, {
+        onSuccess: () => {
+          boardState.setEditingTagId(null)
+          boardState.setEditTagName('')
+          boardState.setEditTagColor('#F3F4F6')
+          resolve()
+        },
+        onError: (error) => reject(error)
       })
-    }
+    })
   }
 
-const handleCancelEditTag = () => {
-  boardState.setEditingTagId(null)
-  boardState.setEditTagName('')
-  boardState.setEditTagColor('#F3F4F6')
-}
+  const handleCancelEditTag = () => {
+    boardState.setEditingTagId(null)
+    boardState.setEditTagName('')
+    boardState.setEditTagColor('#F3F4F6')
+  }
 
-  const handleDeleteTag = (id: number) => {
-    if (window.confirm('Are you sure you want to delete this tag? This will remove it from all cards.')) {
-      mutations.deleteTagMutation.mutate(id)
-    }
+  const handleDeleteTag = async (id: number) => {
+    return new Promise<void>((resolve, reject) => {
+      mutations.deleteTagMutation.mutate(id, {
+        onSuccess: () => resolve(),
+        onError: (error) => reject(error)
+      })
+    })
   }
 
   const isDarkBackground = board.background && ['bg-blue-600', 'bg-green-600', 'bg-purple-600', 'bg-red-600'].includes(board.background)
@@ -463,16 +470,8 @@ const handleCancelEditTag = () => {
         onClose={boardState.handleCloseSettings}
         onArchive={handleArchiveBoard}
         onDelete={handleDeleteBoard}
-        savePending={mutations.updateBoardMutation.isPending}
-        archivePending={mutations.updateBoardMutation.isPending}
-        deletePending={mutations.deleteBoardMutation.isPending}
         tags={availableTags}
-        newTagName={boardState.newTagName}
-        newTagColor={boardState.newTagColor}
-        onNewTagNameChange={boardState.setNewTagName}
-        onNewTagColorChange={boardState.setNewTagColor}
         onCreateTag={handleCreateTag}
-        createTagPending={mutations.createTagMutation.isPending}
         editingTagId={boardState.editingTagId}
         editTagName={boardState.editTagName}
         editTagColor={boardState.editTagColor}
@@ -482,8 +481,6 @@ const handleCancelEditTag = () => {
         onSaveEditTag={handleSaveEditTag}
         onCancelEditTag={handleCancelEditTag}
         onDeleteTag={handleDeleteTag}
-        updateTagPending={mutations.updateTagMutation.isPending}
-        deleteTagPending={mutations.deleteTagMutation.isPending}
       />
 
       <AddColumnModal
