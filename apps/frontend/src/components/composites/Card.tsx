@@ -87,65 +87,68 @@ export default function Card({ item, index, columnTheme, onClick }: CardProps) {
           }`}
           onClick={onClick}
         >
-          {/* Assigned users in top right */}
-          {item.assigned_users && item.assigned_users.length > 0 && (
-            <div className="absolute top-2 right-2 flex -space-x-1">
-              {item.assigned_users.slice(0, 3).map(user => (
-                <div
-                  key={user.id}
-                  className="w-5 h-5 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center text-xs font-medium text-white"
-                  title={user.name || user.email}
-                >
-                  {(user.name || user.email).charAt(0).toUpperCase()}
-                </div>
-              ))}
-              {item.assigned_users.length > 3 && (
-                <div className="w-5 h-5 rounded-full bg-gray-400 border-2 border-white flex items-center justify-center text-xs font-medium text-white">
-                  +{item.assigned_users.length - 3}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="space-y-1.5 pr-16">
+          {/* Assigned users moved to bottom right in metadata row */}
+          <div className="space-y-1.5">
             <h4 className={`font-semibold text-xs leading-tight ${textClasses}`}>{item.title}</h4>
 
             {item.description && (
-              <p className={`text-xs ${textClasses}/70 leading-relaxed line-clamp-1`}>{item.description}</p>
+              <p className={`text-xs ${textClasses}/70 leading-relaxed line-clamp-2`}>{item.description}</p>
             )}
 
-            <div className="flex flex-wrap gap-1">
-              {item.label && (
-                <span className="inline-block bg-blue-500/20 text-blue-600 text-xs px-1.5 py-0.5 rounded font-medium">
-                  {item.label}
-                </span>
+            <div className="flex items-center justify-between">
+              <div className="flex flex-wrap gap-1">
+                {item.label && (
+                  <span className="inline-block bg-blue-500/20 text-blue-600 text-xs px-1.5 py-0.5 rounded font-medium">
+                    {item.label}
+                  </span>
+                )}
+                {item.priority && (
+                  <span className="inline-block bg-red-500/20 text-red-700 text-xs px-1.5 py-0.5 rounded font-medium">
+                    {getPrioritySymbol(item.priority)}
+                  </span>
+                )}
+                {typeof item.effort === 'number' && item.effort > 0 && (
+                  <span className="inline-block bg-green-500/20 text-green-700 text-xs px-1.5 py-0.5 rounded font-medium">
+                    ⚡{item.effort}
+                  </span>
+                )}
+                {dueInfo && (
+                  <span className={`inline-block text-xs px-1.5 py-0.5 rounded font-medium ${
+                    dueInfo.isOverdue ? 'bg-red-500/20 text-red-700' : 'bg-orange-500/20 text-orange-700'
+                  }`}>
+                    {dueInfo.text}
+                  </span>
+                )}
+                {item.tags && item.tags.map(tag => (
+                  <span
+                    key={tag.id}
+                    className="inline-block text-xs px-1.5 py-0.5 rounded font-medium text-white"
+                    style={{ backgroundColor: tag.color }}
+                  >
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
+
+              {/* User avatars in bottom right */}
+              {item.assigned_users && item.assigned_users.length > 0 && (
+                <div className="flex -space-x-1">
+                  {item.assigned_users.slice(0, 3).map(user => (
+                    <div
+                      key={user.id}
+                      className="w-6 h-6 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center text-xs font-medium text-white"
+                      title={user.name || user.email}
+                    >
+                      {(user.name || user.email).charAt(0).toUpperCase()}
+                    </div>
+                  ))}
+                  {item.assigned_users.length > 3 && (
+                    <div className="w-6 h-6 rounded-full bg-gray-400 border-2 border-white flex items-center justify-center text-xs font-medium text-white">
+                      +{item.assigned_users.length - 3}
+                    </div>
+                  )}
+                </div>
               )}
-              {item.priority && (
-                <span className="inline-block bg-red-500/20 text-red-700 text-xs px-1.5 py-0.5 rounded font-medium">
-                  {getPrioritySymbol(item.priority)}
-                </span>
-              )}
-              {typeof item.effort === 'number' && item.effort > 0 && (
-                <span className="inline-block bg-green-500/20 text-green-700 text-xs px-1.5 py-0.5 rounded font-medium">
-                  ⚡{item.effort}
-                </span>
-              )}
-              {dueInfo && (
-                <span className={`inline-block text-xs px-1.5 py-0.5 rounded font-medium ${
-                  dueInfo.isOverdue ? 'bg-red-500/20 text-red-700' : 'bg-orange-500/20 text-orange-700'
-                }`}>
-                  {dueInfo.text}
-                </span>
-              )}
-               {item.tags && item.tags.map(tag => (
-                 <span
-                   key={tag.id}
-                   className="inline-block text-xs px-1.5 py-0.5 rounded font-medium text-white"
-                   style={{ backgroundColor: tag.color }}
-                 >
-                   {tag.name}
-                 </span>
-               ))}
             </div>
 
           </div>
