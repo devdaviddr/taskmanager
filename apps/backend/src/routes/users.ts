@@ -15,9 +15,22 @@ const userRoutes = new Hono<{ Variables: Variables }>();
 
 userRoutes.get('/users', authMiddleware, async (c: AppContext) => {
   try {
-    // For now, return all users. In a real app, you might want to filter by organization/team
-    const users = await UserModel.findAll();
-    return c.json(users);
+    const currentUser = c.get('user');
+    
+    // If user is admin/superadmin, return all users
+    if (currentUser.role === 'admin' || currentUser.role === 'superadmin') {
+      const users = await UserModel.findAll();
+      return c.json(users);
+    }
+    
+    // Otherwise, return only the current user's data
+    const userData = await UserModel.findById(currentUser.id);
+    if (!userData) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+    
+    // Return as array for consistency with admin response
+    return c.json([userData]);
   } catch (error) {
     console.error('Error fetching users:', error);
     return c.json({ error: 'Internal server error' }, 500);

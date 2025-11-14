@@ -11,6 +11,15 @@ export class TaskService {
     }
   }
 
+  static async getAllTasksByUser(userId: number): Promise<Task[]> {
+    try {
+      return await TaskModel.findByUserId(userId);
+    } catch (error) {
+      console.error('Service error - getAllTasksByUser:', error);
+      throw new Error('Failed to retrieve user tasks');
+    }
+  }
+
   static async getTaskById(id: number): Promise<Task> {
     try {
       const task = await TaskModel.findById(id);
@@ -27,12 +36,12 @@ export class TaskService {
     }
   }
 
-  static async createTask(taskData: CreateTaskRequest): Promise<Task> {
+  static async createTask(taskData: CreateTaskRequest, userId: number): Promise<Task> {
     try {
       // Business logic validation
       this.validateCreateTaskData(taskData);
 
-      return await TaskModel.create(taskData);
+      return await TaskModel.create({ ...taskData, user_id: userId });
     } catch (error) {
       console.error('Service error - createTask:', error);
       if (error instanceof Error && error.message.includes('validation')) {

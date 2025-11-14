@@ -1,7 +1,8 @@
 import { BoardService } from '../services/BoardService';
 import { ColumnService } from '../services/ColumnService';
 import { ItemService } from '../services/ItemService';
-import type { Board, Column, Item } from '../types';
+import { TaskService } from '../services/TaskService';
+import type { Board, Column, Item, Task } from '../types';
 import { pool } from '../config/database';
 
 export async function checkBoardOwnership(boardId: number, userId: number): Promise<Board> {
@@ -72,6 +73,18 @@ export async function checkBoardAccessViaItem(itemId: number, userId: number): P
   }
   const { column, board } = await checkBoardAccessViaColumn(item.column_id, userId);
   return { item, column, board };
+}
+
+// Check task ownership
+export async function checkTaskOwnership(taskId: number, userId: number): Promise<Task> {
+  const task = await TaskService.getTaskById(taskId);
+  if (!task) {
+    throw new Error('Task not found');
+  }
+  if (task.user_id !== userId) {
+    throw new Error('Access denied');
+  }
+  return task;
 }
 
 // Helper to check if user has tasks assigned on a board

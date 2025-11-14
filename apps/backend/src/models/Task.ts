@@ -4,7 +4,7 @@ import type { Task, CreateTaskRequest, UpdateTaskRequest } from '../types';
 export class TaskModel {
   static async findAll(): Promise<Task[]> {
     const result = await pool.query(`
-      SELECT id, title, description, completed, created_at, updated_at
+      SELECT id, title, description, completed, user_id, created_at, updated_at
       FROM tasks
       ORDER BY created_at DESC
     `);
@@ -13,19 +13,29 @@ export class TaskModel {
 
   static async findById(id: number): Promise<Task | null> {
     const result = await pool.query(`
-      SELECT id, title, description, completed, created_at, updated_at
+      SELECT id, title, description, completed, user_id, created_at, updated_at
       FROM tasks
       WHERE id = $1
     `, [id]);
     return result.rows[0] || null;
   }
 
-  static async create(taskData: CreateTaskRequest): Promise<Task> {
+  static async findByUserId(userId: number): Promise<Task[]> {
     const result = await pool.query(`
-      INSERT INTO tasks (title, description, completed, created_at, updated_at)
-      VALUES ($1, $2, false, NOW(), NOW())
-      RETURNING id, title, description, completed, created_at, updated_at
-    `, [taskData.title, taskData.description || null]);
+      SELECT id, title, description, completed, user_id, created_at, updated_at
+      FROM tasks
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+    `, [userId]);
+    return result.rows;
+  }
+
+  static async create(taskData: CreateTaskRequest & { user_id: number }): Promise<Task> {
+    const result = await pool.query(`
+      INSERT INTO tasks (title, description, completed, user_id, created_at, updated_at)
+      VALUES ($1, $2, false, $3, NOW(), NOW())
+      RETURNING id, title, description, completed, user_id, created_at, updated_at
+    `, [taskData.title, taskData.description || null, taskData.user_id]);
     return result.rows[0];
   }
 
@@ -63,7 +73,7 @@ export class TaskModel {
       UPDATE tasks
       SET ${fields.join(', ')}
       WHERE id = $${paramCount}
-      RETURNING id, title, description, completed, created_at, updated_at
+      RETURNING id, title, description, completed, user_id, created_at, updated_at
     `, values);
 
     return result.rows[0] || null;
