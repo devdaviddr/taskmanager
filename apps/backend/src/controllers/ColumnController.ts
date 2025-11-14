@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { ColumnService } from '../services/ColumnService';
 import type { CreateColumnRequest } from '../types';
+import { checkBoardOwnershipViaColumn } from '../utils/auth';
 
 export class ColumnController {
   static async getByBoard(c: Context) {
@@ -45,6 +46,23 @@ export class ColumnController {
         return c.json({ error: 'Invalid column ID' }, 400);
       }
 
+      const user = c.get('user');
+      
+      // Check board ownership via column
+      try {
+        await checkBoardOwnershipViaColumn(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Column not found' || error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
+      }
+
       const body: Partial<CreateColumnRequest> = await c.req.json();
       const column = await ColumnService.updateColumn(id, body);
 
@@ -65,6 +83,23 @@ export class ColumnController {
         return c.json({ error: 'Invalid column ID' }, 400);
       }
 
+      const user = c.get('user');
+      
+      // Check board ownership via column
+      try {
+        await checkBoardOwnershipViaColumn(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Column not found' || error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
+      }
+
       await ColumnService.deleteColumn(id);
       return c.json({ message: 'Column deleted successfully' });
     } catch (error) {
@@ -81,6 +116,23 @@ export class ColumnController {
       const id = parseInt(c.req.param('id'));
       if (isNaN(id)) {
         return c.json({ error: 'Invalid column ID' }, 400);
+      }
+
+      const user = c.get('user');
+      
+      // Check board ownership via column
+      try {
+        await checkBoardOwnershipViaColumn(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Column not found' || error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
       }
 
       const body = await c.req.json();
