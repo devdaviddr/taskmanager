@@ -9,88 +9,101 @@ erDiagram
     ITEMS ||--o{ ITEM_USERS : "assigned to"
     TAGS ||--o{ ITEM_TAGS : "belongs to"
 
+    TASKS {
+        int id PK
+        varchar(255) title
+        text description
+        boolean completed
+        timestamp created_at
+        timestamp updated_at
+    }
+
     USERS {
         int id PK
-        varchar(255) email UK
-        varchar(255) password_hash
+        varchar(255) email UK "NOT NULL"
+        varchar(255) password_hash "NOT NULL"
         varchar(255) name
-        varchar(20) role
+        varchar(20) role "DEFAULT 'user', CHECK IN ('user', 'admin', 'superadmin')"
         timestamp created_at
         timestamp updated_at
     }
 
     REFRESH_TOKENS {
         int id PK
-        int user_id FK
-        varchar(64) token_hash UK
-        timestamp expires_at
+        int user_id FK "NOT NULL, REFERENCES users(id) ON DELETE CASCADE"
+        varchar(128) token_hash UK "NOT NULL"
+        timestamp expires_at "NOT NULL"
         timestamp created_at
     }
 
     INVALIDATED_TOKENS {
         int id PK
-        varchar(64) token_hash UK
-        timestamp expires_at
+        varchar(128) token_hash UK "NOT NULL"
+        timestamp expires_at "NOT NULL"
         timestamp created_at
     }
 
     BOARDS {
         int id PK
-        varchar(255) name
+        varchar(255) name "NOT NULL"
         text description
-        varchar(255) background
-        varchar(255) column_theme
-        boolean archived
-        int user_id FK
+        varchar(255) background "DEFAULT 'bg-gray-50'"
+        varchar(255) column_theme "DEFAULT 'light'"
+        boolean archived "NOT NULL, DEFAULT FALSE"
+        int user_id FK "NOT NULL, REFERENCES users(id) ON DELETE CASCADE"
         timestamp created_at
         timestamp updated_at
     }
 
     COLUMNS {
         int id PK
-        int board_id FK
-        varchar(100) name
-        int position
+        int board_id FK "NOT NULL, REFERENCES boards(id) ON DELETE CASCADE"
+        varchar(100) name "NOT NULL"
+        int position "NOT NULL, DEFAULT 0"
         timestamp created_at
         timestamp updated_at
+        "UNIQUE(board_id, name)"
     }
 
     ITEMS {
         int id PK
-        int column_id FK
-        varchar(255) title
+        int column_id FK "NOT NULL, REFERENCES columns(id) ON DELETE CASCADE"
+        varchar(255) title "NOT NULL"
         text description
-        int position
+        int position "NOT NULL, DEFAULT 0"
         timestamp start_date
         timestamp end_date
-        int effort
+        int effort "CHECK (effort >= 0 AND effort <= 10)"
         text label
-        varchar(10) priority
-        boolean archived
+        varchar(10) priority "CHECK IN ('high', 'medium', 'low')"
+        boolean archived "NOT NULL, DEFAULT FALSE"
         timestamp created_at
         timestamp updated_at
     }
 
     TAGS {
         int id PK
-        varchar(50) name UK
-        varchar(7) color
+        varchar(50) name UK "NOT NULL"
+        varchar(7) color "DEFAULT '#3B82F6'"
         timestamp created_at
         timestamp updated_at
     }
 
     ITEM_TAGS {
-        int item_id FK
-        int tag_id FK
+        int item_id FK "NOT NULL, REFERENCES items(id) ON DELETE CASCADE"
+        int tag_id FK "NOT NULL, REFERENCES tags(id) ON DELETE CASCADE"
+        "PRIMARY KEY (item_id, tag_id)"
     }
 
     ITEM_USERS {
-        int item_id FK
-        int user_id FK
+        int item_id FK "NOT NULL, REFERENCES items(id) ON DELETE CASCADE"
+        int user_id FK "NOT NULL, REFERENCES users(id) ON DELETE CASCADE"
+        "PRIMARY KEY (item_id, user_id)"
     }
 
     BOARD_USERS {
-        int board_id FK
-        int user_id FK
-        varchar(20) role
+        int board_id FK "NOT NULL, REFERENCES boards(id) ON DELETE CASCADE"
+        int user_id FK "NOT NULL, REFERENCES users(id) ON DELETE CASCADE"
+        varchar(20) role "DEFAULT 'member'"
+        "PRIMARY KEY (board_id, user_id)"
     }
