@@ -3,9 +3,16 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Set environment variables globally BEFORE any test code runs
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://postgres:password@localhost:5432/taskmanager_test';
+process.env.JWT_SECRET = 'test-jwt-secret';
+process.env.NODE_ENV = 'test';
+process.env.DISABLE_RATE_LIMITING = 'true';
+
 export default async function globalSetup() {
+  // Connect to the default 'postgres' database to create/drop the test database
   const adminPool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: 'postgresql://postgres:password@localhost:5432/postgres',
   });
 
   try {
@@ -13,13 +20,25 @@ export default async function globalSetup() {
 
     // Drop existing test database with FORCE (don't terminate connections here as they may be from current runs)
     try {
+      // Terminate all connections to the test database first
+      await adminPool.query(`
+        SELECT pg_terminate_backend(pg_stat_activity.pid)
+        FROM pg_stat_activity
+        WHERE pg_stat_activity.datname = 'taskmanager_test'
+        AND pid <> pg_backend_pid();
+      `).catch(() => {
+        // If this fails, it's okay
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 200));
+
       await adminPool.query('DROP DATABASE IF EXISTS taskmanager_test WITH (FORCE)');
     } catch (error) {
-      // Ignore if database is being used
+      console.log('Note: Could not drop existing test database:', (error as Error).message);
     }
     
     // Wait to ensure database is fully dropped
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Create fresh test database
     await adminPool.query('CREATE DATABASE taskmanager_test');
@@ -44,6 +63,7 @@ export default async function globalSetup() {
         DROP TABLE IF EXISTS invalidated_tokens CASCADE;
         DROP TABLE IF EXISTS refresh_tokens CASCADE;
         DROP TABLE IF EXISTS items CASCADE;
+        DROP TABLE IF EXISTS tasks CASCADE;
         DROP TABLE IF EXISTS columns CASCADE;
         DROP TABLE IF EXISTS tags CASCADE;
         DROP TABLE IF EXISTS boards CASCADE;
@@ -106,6 +126,20 @@ export default async function globalSetup() {
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
           );
         `,
+        `
+          CREATE TABLE tasks (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            completed BOOLEAN NOT NULL DEFAULT FALSE,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          );
+        `,
+        `CREATE INDEX idx_tasks_completed ON tasks(completed);`,
+        `CREATE INDEX idx_tasks_created_at ON tasks(created_at DESC);`,
+        `CREATE INDEX idx_tasks_user_id ON tasks(user_id);`,
         `
           CREATE TABLE tags (
             id SERIAL PRIMARY KEY,

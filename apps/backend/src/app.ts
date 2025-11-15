@@ -1,4 +1,11 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+
+// Only load from .env file if environment variables aren't already set (e.g., by tests)
+// This allows tests to pre-set env vars before importing this file
+if (!process.env.NODE_ENV) {
+  dotenv.config();
+}
+
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { rateLimiter } from 'hono-rate-limiter';

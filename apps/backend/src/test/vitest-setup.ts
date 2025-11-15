@@ -15,6 +15,7 @@ beforeEach(async () => {
     await testPool.query('DELETE FROM item_tags');
     await testPool.query('DELETE FROM item_users');
     await testPool.query('DELETE FROM items');
+    await testPool.query('DELETE FROM tasks');
     await testPool.query('DELETE FROM columns');
     await testPool.query('DELETE FROM tags');
     await testPool.query('DELETE FROM boards');
