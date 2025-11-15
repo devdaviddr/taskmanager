@@ -33,7 +33,7 @@ router.get('/health', async (c) => {
 
 // Mount routes
 router.route('/auth', authRoutes);
-router.route('/admin', adminRoutes);
+router.route('/api/admin', adminRoutes);
 router.route('/api', userRoutes);
 router.route('/api', taskRoutes);
 router.route('/api', boardRoutes);
