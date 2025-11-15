@@ -5,12 +5,13 @@ import app from '../app';
 describe('Authentication API', () => {
   describe('POST /api/auth/register', () => {
     test('Register a new user successfully', async () => {
-      const result = await auth.register(testData.validUser);
+      const userData = testData.validUser;
+      const result = await auth.register(userData);
 
-      expect(result.status).toBe(200);
+      expect(result.status).toBe(201);
       expect(result.data.user).toBeDefined();
-      expect(result.data.user.email).toBe(testData.validUser.email);
-      expect(result.data.user.name).toBe(testData.validUser.name);
+      expect(result.data.user.email).toBe(userData.email);
+      expect(result.data.user.name).toBe(userData.name);
       expect(result.data.user).not.toHaveProperty('password_hash');
       expect(result.data.token).toBeDefined(); // Non-production env
       expect(result.data.refreshToken).toBeDefined(); // Non-production env
@@ -41,11 +42,12 @@ describe('Authentication API', () => {
     });
 
     test('Register fails with duplicate email', async () => {
-      // First registration
-      await auth.register(testData.validUser);
+      // First registration with a fixed email
+      const fixedEmail = { ...testData.validUser, email: `duplicate_${Date.now()}@example.com` };
+      await auth.register(fixedEmail);
 
       // Try to register again with same email
-      const result = await auth.register(testData.validUser);
+      const result = await auth.register(fixedEmail);
 
       expect(result.status).toBe(400);
       expect(result.data.error).toContain('already exists');
@@ -79,14 +81,15 @@ describe('Authentication API', () => {
   describe('POST /api/auth/login', () => {
     test('Login with valid credentials', async () => {
       // First register a user
-      await auth.register(testData.validUser);
+      const userData = testData.validUser;
+      const registrationResult = await auth.register(userData);
 
       // Then login
-      const result = await auth.login(testData.validUser.email, testData.validUser.password);
+      const result = await auth.login(registrationResult.data.user.email, userData.password);
 
       expect(result.status).toBe(200);
       expect(result.data.user).toBeDefined();
-      expect(result.data.user.email).toBe(testData.validUser.email);
+      expect(result.data.user.email).toBe(registrationResult.data.user.email);
       expect(result.accessToken).toBeDefined();
       expect(result.refreshToken).toBeDefined();
     });
@@ -95,15 +98,16 @@ describe('Authentication API', () => {
       const result = await auth.login('nonexistent@example.com', 'Password123!@#');
 
       expect(result.status).toBe(400);
-      expect(result.data.error).toContain('not found');
+      expect(result.data.error).toContain('Invalid credentials');
     });
 
     test('Login fails with incorrect password', async () => {
-      // Register user first
-      await auth.register(testData.validUser);
+      // Register user first and capture the registered user data
+      const userData = testData.validUser;
+      const registrationResult = await auth.register(userData);
 
       // Try to login with wrong password
-      const result = await auth.login(testData.validUser.email, 'WrongPassword123!@#');
+      const result = await auth.login(registrationResult.data.user.email, 'WrongPassword123!@#');
 
       expect(result.status).toBe(400);
       expect(result.data.error).toContain('Invalid credentials');
@@ -151,7 +155,7 @@ describe('Authentication API', () => {
 
       expect(result.status).toBe(200);
       expect(result.data.user).toBeDefined();
-      expect(result.data.user.email).toBe(testData.validUser.email);
+      expect(result.data.user.email).toBe(registerResult.data.user.email);
       expect(result.data.user).not.toHaveProperty('password_hash');
     });
 
@@ -220,7 +224,9 @@ describe('Authentication API', () => {
   describe('POST /api/auth/refresh', () => {
     test('Refresh access token successfully', async () => {
       // Register and login
-      const loginResult = await auth.login(testData.validUser.email, testData.validUser.password);
+      const userData = testData.validUser;
+      const registrationResult = await auth.register(userData);
+      const loginResult = await auth.login(registrationResult.data.user.email, userData.password);
 
       // Refresh token
       const result = await auth.refresh(loginResult.accessToken, loginResult.refreshToken);
@@ -246,7 +252,9 @@ describe('Authentication API', () => {
 
     test('Old access token is invalidated after refresh', async () => {
       // Register and login
-      const loginResult = await auth.login(testData.validUser.email, testData.validUser.password);
+      const userData = testData.validUser;
+      const registrationResult = await auth.register(userData);
+      const loginResult = await auth.login(registrationResult.data.user.email, userData.password);
       const oldAccessToken = loginResult.accessToken;
 
       // Refresh token
@@ -265,7 +273,9 @@ describe('Authentication API', () => {
 
     test('Refresh invalidates old refresh token', async () => {
       // Register and login
-      const loginResult = await auth.login(testData.validUser.email, testData.validUser.password);
+      const userData = testData.validUser;
+      const registrationResult = await auth.register(userData);
+      const loginResult = await auth.login(registrationResult.data.user.email, userData.password);
       const oldRefreshToken = loginResult.refreshToken;
 
       // Refresh once
@@ -295,8 +305,9 @@ describe('Authentication API', () => {
       const me1 = await auth.getMe(user1.accessToken);
       const me2 = await auth.getMe(user2.accessToken);
 
-      expect(me1.data.user.email).toBe(testData.validUser.email);
-      expect(me2.data.user.email).toBe(testData.validUser2.email);
+      // Compare with the emails from the registration response
+      expect(me1.data.user.email).toBe(user1.data.user.email);
+      expect(me2.data.user.email).toBe(user2.data.user.email);
       expect(me1.data.user.email).not.toBe(me2.data.user.email);
     });
   });

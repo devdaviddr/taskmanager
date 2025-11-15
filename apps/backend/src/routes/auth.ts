@@ -1,10 +1,29 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { AuthService } from '../services/AuthService';
 import { validatePasswordStrength } from '../utils/passwordValidator';
 
 const authRoutes = new Hono();
 const isProduction = process.env.NODE_ENV === 'production';
+
+// Helper to parse cookies correctly (handling JWT format with = signs)
+const parseCookies = (cookieHeader: string): Record<string, string> => {
+  const cookies: Record<string, string> = {};
+  const cookiePairs = cookieHeader.split(';');
+  
+  for (const pair of cookiePairs) {
+    const trimmedPair = pair.trim();
+    const eqIndex = trimmedPair.indexOf('=');
+    if (eqIndex === -1) continue;
+    
+    const name = trimmedPair.substring(0, eqIndex);
+    const value = trimmedPair.substring(eqIndex + 1);
+    cookies[name] = value;
+  }
+  
+  return cookies;
+};
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email format'),
@@ -85,12 +104,7 @@ authRoutes.get('/me', async (c) => {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
-  // Parse cookies manually
-  const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-    const [name, value] = cookie.trim().split('=');
-    acc[name] = value;
-    return acc;
-  }, {} as Record<string, string>);
+  const cookies = parseCookies(cookieHeader);
 
   const token = cookies.accessToken;
   if (!token) {
@@ -99,6 +113,10 @@ authRoutes.get('/me', async (c) => {
 
   // Check if token is blacklisted
   const isBlacklisted = await AuthService.isTokenBlacklisted(token);
+  if (process.env.NODE_ENV === 'test' && token.length > 100) {
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    console.log('[/me] Checking token with hash:', tokenHash.substring(0, 16) + '... isBlacklisted:', isBlacklisted);
+  }
   if (isBlacklisted) {
     return c.json({ error: 'Token has been invalidated' }, 401);
   }
@@ -118,12 +136,7 @@ authRoutes.post('/logout', async (c) => {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
-  // Parse cookies manually
-  const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-    const [name, value] = cookie.trim().split('=');
-    acc[name] = value;
-    return acc;
-  }, {} as Record<string, string>);
+  const cookies = parseCookies(cookieHeader);
 
   const token = cookies.accessToken;
   if (token) {
@@ -155,14 +168,11 @@ authRoutes.post('/refresh', async (c) => {
   }
 
   // Parse cookies manually
-  const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-    const [name, value] = cookie.trim().split('=');
-    acc[name] = value;
-    return acc;
-  }, {} as Record<string, string>);
+  const cookies = parseCookies(cookieHeader);
 
   const oldAccessToken = cookies.accessToken;
   const refreshToken = cookies.refreshToken;
+  
   if (!refreshToken) {
     return c.json({ error: 'Refresh token required' }, 401);
   }
@@ -185,7 +195,12 @@ authRoutes.post('/refresh', async (c) => {
   await AuthService.invalidateRefreshTokens(user.id);
   await AuthService.storeRefreshToken(user.id, newRefreshToken);
 
-  const response = c.json({ user: { id: user.id, email: user.email, name: user.name } });
+  const responseBody = { 
+    user: { id: user.id, email: user.email, name: user.name },
+    ...(isProduction ? {} : { token: newAccessToken, refreshToken: newRefreshToken }),
+  };
+  
+  const response = c.json(responseBody);
   
   // Set new cookies
   response.headers.append('Set-Cookie', `accessToken=${newAccessToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=${60 * 60}; Path=/`);

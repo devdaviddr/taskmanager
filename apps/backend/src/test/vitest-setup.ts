@@ -1,8 +1,5 @@
-import { setupTestDatabase, teardownTestDatabase, testPool } from './setup';
-import { afterAll, beforeEach } from 'vitest';
-
-// Run setup once before all tests
-await setupTestDatabase();
+import { testPool } from './setup';
+import { beforeEach } from 'vitest';
 
 // Clean up test data before each test
 beforeEach(async () => {
@@ -21,11 +18,6 @@ beforeEach(async () => {
   } catch (error) {
     console.error('❌ Error cleaning up test data:', error);
   }
-});
-
-// Cleanup after all tests
-afterAll(async () => {
-  await teardownTestDatabase();
 });
 
 

@@ -8,7 +8,7 @@ process.env.NODE_ENV = 'test';
 process.env.DISABLE_RATE_LIMITING = 'true'; // Disable rate limiting in tests
 
 // Export test utilities
-export { testPool, setupTestDatabase, teardownTestDatabase, testConnection } from './setup';
+export { testPool, teardownTestDatabase, testConnection } from './setup';
 
 // Helper to create mock request
 export const createMockRequest = (method: string, url: string, body?: any, headers?: Record<string, string>) => {
@@ -176,13 +176,13 @@ export const auth = {
     });
     const data = await parseResponse(res);
     
-    // Tokens would be in cookies in real HTTP, but we don't have those in tests
-    // The route should return updated tokens in the response
+    // In test environments, tokens are returned in response body
+    // In production, they would be in HTTP-only cookies
     return {
       status: res.status,
       data,
-      accessToken: undefined,
-      refreshToken: undefined,
+      accessToken: data.token,
+      refreshToken: data.refreshToken,
     };
   },
 };

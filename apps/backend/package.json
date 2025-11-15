@@ -28,6 +28,7 @@
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20.19.25",
+    "@vitest/coverage-v8": "^4.0.9",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0",
     "vitest": "^4.0.9"

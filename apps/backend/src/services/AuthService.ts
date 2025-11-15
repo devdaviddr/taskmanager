@@ -23,6 +23,7 @@ export class AuthService {
       email: user.email,
       name: user.name,
       role: user.role,
+      jti: crypto.randomUUID(), // Add unique identifier for token uniqueness
     };
     return jwt.sign(payload, ACTUAL_JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
   }
@@ -95,6 +96,10 @@ export class AuthService {
       // Calculate expiration time from token payload
       const expiresAt = new Date(payload.exp * 1000);
 
+      if (process.env.NODE_ENV === 'test') {
+        console.log('[blacklistToken] Blacklisting token with hash:', tokenHash.substring(0, 16) + '...');
+      }
+
       await pool.query(
         'INSERT INTO invalidated_tokens (token_hash, expires_at) VALUES ($1, $2) ON CONFLICT (token_hash) DO NOTHING',
         [tokenHash, expiresAt]
@@ -108,10 +113,18 @@ export class AuthService {
     try {
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
+      if (process.env.NODE_ENV === 'test' && token.length > 100) {
+        console.log('[isTokenBlacklisted] Checking token with hash:', tokenHash.substring(0, 16) + '...');
+      }
+
       const result = await pool.query(
         'SELECT 1 FROM invalidated_tokens WHERE token_hash = $1 AND expires_at > NOW()',
         [tokenHash]
       );
+
+      if (process.env.NODE_ENV === 'test' && token.length > 100) {
+        console.log('[isTokenBlacklisted] Found in blacklist:', result.rows.length > 0);
+      }
 
       return result.rows.length > 0;
     } catch (error) {
