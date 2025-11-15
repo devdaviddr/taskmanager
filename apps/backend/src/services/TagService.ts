@@ -150,10 +150,12 @@ export class TagService {
   }
 
   private static validateCreateTagData(data: CreateTagRequest): void {
-    if (!data.name || typeof data.name !== 'string') {
+    // Check if name is a string first
+    if (typeof data.name !== 'string') {
       throw new Error('Validation error: Name is required and must be a string');
     }
 
+    // Then check if it's empty
     if (data.name.trim().length === 0) {
       throw new Error('Validation error: Name cannot be empty');
     }

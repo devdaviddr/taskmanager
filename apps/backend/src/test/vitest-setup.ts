@@ -1,3 +1,9 @@
+// Set test database URL BEFORE importing anything else
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://postgres:password@localhost:5432/taskmanager_test';
+process.env.JWT_SECRET = 'test-jwt-secret';
+process.env.NODE_ENV = 'test';
+process.env.DISABLE_RATE_LIMITING = 'true';
+
 import { testPool } from './setup';
 import { beforeEach } from 'vitest';
 

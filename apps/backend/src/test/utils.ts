@@ -1,11 +1,11 @@
-import { testPool } from './setup';
-import app from '../app';
-
-// Mock environment variables for tests
+// Mock environment variables for tests BEFORE importing anything else
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://postgres:password@localhost:5432/taskmanager_test';
 process.env.JWT_SECRET = 'test-jwt-secret';
 process.env.NODE_ENV = 'test';
 process.env.DISABLE_RATE_LIMITING = 'true'; // Disable rate limiting in tests
+
+import { testPool } from './setup';
+import app from '../app';
 
 // Export test utilities
 export { testPool, teardownTestDatabase, testConnection } from './setup';
