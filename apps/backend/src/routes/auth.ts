@@ -1,12 +1,24 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { AuthService } from '../services/AuthService';
+import { validatePasswordStrength } from '../utils/passwordValidator';
 
 const authRoutes = new Hono();
+const isProduction = process.env.NODE_ENV === 'production';
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email format'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string()
+    .min(12, 'Password must be at least 12 characters long')
+    .superRefine((pwd, ctx) => {
+      const result = validatePasswordStrength(pwd);
+      if (!result.valid) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: result.errors.join('; '),
+        });
+      }
+    }),
   name: z.string().optional(),
 });
 
@@ -22,7 +34,11 @@ authRoutes.post('/register', async (c) => {
 
     const result = await AuthService.register(validatedData);
     
-    const response = c.json({ user: result.user });
+    const response = c.json({ 
+      user: result.user,
+      // Only return token in response for non-production environments
+      ...(isProduction ? {} : { token: result.token, refreshToken: result.refreshToken }),
+    });
     
     // Set httpOnly cookies
     response.headers.append('Set-Cookie', `accessToken=${result.token}; HttpOnly; Secure; SameSite=Strict; Max-Age=${60 * 60}; Path=/`);
@@ -44,7 +60,11 @@ authRoutes.post('/login', async (c) => {
 
     const result = await AuthService.login(validatedData);
     
-    const response = c.json({ user: result.user });
+    const response = c.json({ 
+      user: result.user,
+      // Only return token in response for non-production environments
+      ...(isProduction ? {} : { token: result.token, refreshToken: result.refreshToken }),
+    });
     
     // Set httpOnly cookies
     response.headers.append('Set-Cookie', `accessToken=${result.token}; HttpOnly; Secure; SameSite=Strict; Max-Age=${60 * 60}; Path=/`);
@@ -141,6 +161,7 @@ authRoutes.post('/refresh', async (c) => {
     return acc;
   }, {} as Record<string, string>);
 
+  const oldAccessToken = cookies.accessToken;
   const refreshToken = cookies.refreshToken;
   if (!refreshToken) {
     return c.json({ error: 'Refresh token required' }, 401);
@@ -149,6 +170,11 @@ authRoutes.post('/refresh', async (c) => {
   const user = await AuthService.validateRefreshToken(refreshToken);
   if (!user) {
     return c.json({ error: 'Invalid refresh token' }, 401);
+  }
+
+  // Invalidate old access token (token rotation)
+  if (oldAccessToken) {
+    await AuthService.blacklistToken(oldAccessToken);
   }
 
   // Generate new tokens

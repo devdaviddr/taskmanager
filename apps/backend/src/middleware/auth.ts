@@ -2,21 +2,29 @@ import { MiddlewareHandler } from 'hono';
 import { AuthService } from '../services/AuthService';
 
 export const authMiddleware: MiddlewareHandler = async (c, next) => {
-  const cookieHeader = c.req.header('Cookie');
-  if (!cookieHeader) {
-    return c.json({ error: 'Unauthorized' }, 401);
+  let token: string | null = null;
+
+  // Check Authorization header first (Bearer token)
+  const authHeader = c.req.header('Authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    token = authHeader.substring(7);
   }
 
-  // Parse cookies manually
-  const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-    const [name, value] = cookie.trim().split('=');
-    acc[name] = value;
-    return acc;
-  }, {} as Record<string, string>);
-
-  const token = cookies.accessToken;
+  // Fall back to cookie if no Bearer token
   if (!token) {
-    return c.json({ error: 'Unauthorized' }, 401);
+    const cookieHeader = c.req.header('Cookie');
+    if (cookieHeader) {
+      const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+        const [name, value] = cookie.trim().split('=');
+        acc[name] = value;
+        return acc;
+      }, {} as Record<string, string>);
+      token = cookies.accessToken;
+    }
+  }
+
+  if (!token) {
+    return c.json({ error: 'Unauthorized - missing token' }, 401);
   }
 
   // Check if token is blacklisted

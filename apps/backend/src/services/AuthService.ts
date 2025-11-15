@@ -4,7 +4,15 @@ import { pool } from '../config/database';
 import crypto from 'crypto';
 import type { User, CreateUserRequest, LoginRequest, AuthResponse } from '../types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+// Ensure JWT_SECRET is set, especially in production
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('CRITICAL: JWT_SECRET environment variable must be set in production');
+  }
+  console.warn('⚠️  Using insecure default JWT_SECRET - set JWT_SECRET environment variable for security');
+}
+const ACTUAL_JWT_SECRET = JWT_SECRET || 'development-only-insecure-key-do-not-use-in-production';
 const JWT_EXPIRES_IN = '1h';
 const REFRESH_TOKEN_EXPIRES_IN = '7d';
 
@@ -16,12 +24,12 @@ export class AuthService {
       name: user.name,
       role: user.role,
     };
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    return jwt.sign(payload, ACTUAL_JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
   }
 
   static verifyToken(token: string): any {
     try {
-      return jwt.verify(token, JWT_SECRET);
+      return jwt.verify(token, ACTUAL_JWT_SECRET);
     } catch (error) {
       return null;
     }

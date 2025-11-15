@@ -20,7 +20,32 @@ const app = new Hono();
 // Environment-aware CORS configuration
 const corsOrigins = getCorsOrigins();
 
-// Rate limiting
+// Rate limiting - strict limits for auth endpoints
+app.use('/auth/login', rateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 5, // Only 5 login attempts per 15 minutes
+  standardHeaders: true,
+  keyGenerator: (c) => {
+    return c.req.header('CF-Connecting-IP') ||
+           c.req.header('X-Forwarded-For') ||
+           c.req.header('X-Real-IP') ||
+           'unknown';
+  },
+}));
+
+app.use('/auth/register', rateLimiter({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 3, // Only 3 registration attempts per hour
+  standardHeaders: true,
+  keyGenerator: (c) => {
+    return c.req.header('CF-Connecting-IP') ||
+           c.req.header('X-Forwarded-For') ||
+           c.req.header('X-Real-IP') ||
+           'unknown';
+  },
+}));
+
+// Global rate limiting
 app.use('*', rateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   limit: isProduction ? 100 : 1000, // stricter in production
