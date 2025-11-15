@@ -16,57 +16,99 @@ export const testPool = new Pool({
 
 // Flag to prevent duplicate setup
 let isSetup = false;
+let setupPromise: Promise<void> | null = null;
 
 // Setup test database
 export const setupTestDatabase = async (): Promise<void> => {
   if (isSetup) return;
-  isSetup = true;
+  if (setupPromise) return setupPromise;
 
-  const adminPool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-  });
+  setupPromise = (async () => {
+    isSetup = true;
 
-  try {
-    // Terminate all connections to the test database
-    await adminPool.query(`
-      SELECT pg_terminate_backend(pg_stat_activity.pid)
-      FROM pg_stat_activity
-      WHERE pg_stat_activity.datname = 'taskmanager_test'
-      AND pid <> pg_backend_pid()
-    `);
+    const adminPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+    });
 
-    // Drop existing test database
-    await adminPool.query('DROP DATABASE IF EXISTS taskmanager_test');
-    
-    // Small delay to ensure database is fully dropped
-    await new Promise(resolve => setTimeout(resolve, 100));
+    try {
+      // Terminate all connections to the test database
+      await adminPool.query(`
+        SELECT pg_terminate_backend(pg_stat_activity.pid)
+        FROM pg_stat_activity
+        WHERE pg_stat_activity.datname = 'taskmanager_test'
+        AND pid <> pg_backend_pid()
+      `).catch(() => {
+        // Ignore if database doesn't exist yet
+      });
 
-    // Create fresh test database
-    await adminPool.query('CREATE DATABASE taskmanager_test');
-    await adminPool.end();
-  } catch (error) {
-    await adminPool.end();
-    console.error('Failed to setup test database:', (error as Error).message);
-    throw error;
-  }
+      // Drop existing test database with FORCE
+      try {
+        await adminPool.query('DROP DATABASE IF EXISTS taskmanager_test WITH (FORCE)');
+      } catch (error) {
+        // Ignore if database is being used
+      }
+      
+      // Wait to ensure database is fully dropped
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-  // Run migrations on test database
-  execSync('npm run migrate', {
-    env: { ...process.env, DATABASE_URL: testDatabaseUrl },
-    stdio: 'inherit',
-  });
+      // Create fresh test database
+      try {
+        await adminPool.query('CREATE DATABASE taskmanager_test');
+      } catch (error) {
+        // If database already exists, that's ok (parallel run already created it)
+        const msg = (error as Error).message;
+        if (!msg.includes('already exists') && !msg.includes('duplicate key')) {
+          throw error;
+        }
+      }
+      
+      // Wait for database to be ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      await adminPool.end();
+    } catch (error) {
+      await adminPool.end();
+      throw error;
+    }
+
+    // Run migrations on test database
+    execSync('npm run migrate', {
+      env: { ...process.env, DATABASE_URL: testDatabaseUrl },
+      stdio: 'inherit',
+    });
+  })();
+
+  return setupPromise;
 };
 
 // Teardown test database
 export const teardownTestDatabase = async (): Promise<void> => {
-  await testPool.end();
+  try {
+    await testPool.end();
+  } catch (error) {
+    // Ignore pool close errors
+  }
 
   // Optionally drop the test database
   try {
     const adminPool = new Pool({
       connectionString: process.env.DATABASE_URL,
     });
-    await adminPool.query('DROP DATABASE IF EXISTS taskmanager_test WITH (FORCE)');
+    
+    // Terminate all connections
+    await adminPool.query(`
+      SELECT pg_terminate_backend(pg_stat_activity.pid)
+      FROM pg_stat_activity
+      WHERE pg_stat_activity.datname = 'taskmanager_test'
+      AND pid <> pg_backend_pid()
+    `).catch(() => {
+      // Ignore if database doesn't exist
+    });
+    
+    await adminPool.query('DROP DATABASE IF EXISTS taskmanager_test WITH (FORCE)').catch(() => {
+      // Ignore errors
+    });
+    
     await adminPool.end();
   } catch (error) {
     console.warn('Failed to drop test database:', (error as Error).message);
@@ -83,3 +125,7 @@ export const testConnection = async (): Promise<void> => {
     throw error;
   }
 };
+
+
+
+
