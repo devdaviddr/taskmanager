@@ -256,6 +256,182 @@ app.get('/openapi.json', (c) => {
           },
         },
       },
+      '/api/boards': {
+        get: {
+          summary: 'Get all boards',
+          description: 'Get all boards for the authenticated user',
+          operationId: 'getBoards',
+          tags: ['Boards'],
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': {
+              description: 'List of boards',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        name: { type: 'string' },
+                        description: { type: 'string', nullable: true },
+                        background: { type: 'string' },
+                        column_theme: { type: 'string' },
+                        archived: { type: 'boolean' },
+                        user_id: { type: 'integer' },
+                        created_at: { type: 'string', format: 'date-time' },
+                        updated_at: { type: 'string', format: 'date-time' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            '401': { description: 'Unauthorized' },
+          },
+        },
+        post: {
+          summary: 'Create a new board',
+          description: 'Create a new board for the authenticated user',
+          operationId: 'createBoard',
+          tags: ['Boards'],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', description: 'Board name' },
+                    description: { type: 'string', description: 'Board description' },
+                    background: { type: 'string', description: 'Board background color class' },
+                    column_theme: { type: 'string', description: 'Column theme (light/dark)' },
+                    archived: { type: 'boolean', description: 'Whether board is archived' },
+                  },
+                  required: ['name'],
+                },
+              },
+            },
+          },
+          responses: {
+            '201': { description: 'Board created successfully' },
+            '400': { description: 'Bad request' },
+            '401': { description: 'Unauthorized' },
+          },
+        },
+      },
+      '/api/boards/{id}': {
+        get: {
+          summary: 'Get board by ID',
+          description: 'Get a specific board by ID',
+          operationId: 'getBoardById',
+          tags: ['Boards'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'Board ID',
+            },
+          ],
+          responses: {
+            '200': { description: 'Board details' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Access denied' },
+            '404': { description: 'Board not found' },
+          },
+        },
+        put: {
+          summary: 'Update board',
+          description: 'Update an existing board',
+          operationId: 'updateBoard',
+          tags: ['Boards'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'Board ID',
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', description: 'Board name' },
+                    description: { type: 'string', description: 'Board description' },
+                    background: { type: 'string', description: 'Board background color class' },
+                    column_theme: { type: 'string', description: 'Column theme (light/dark)' },
+                    archived: { type: 'boolean', description: 'Whether board is archived' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { description: 'Board updated successfully' },
+            '400': { description: 'Bad request' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Access denied' },
+            '404': { description: 'Board not found' },
+          },
+        },
+        delete: {
+          summary: 'Delete board',
+          description: 'Delete a board',
+          operationId: 'deleteBoard',
+          tags: ['Boards'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'Board ID',
+            },
+          ],
+          responses: {
+            '200': { description: 'Board deleted successfully' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Access denied' },
+            '404': { description: 'Board not found' },
+          },
+        },
+      },
+      '/api/boards/{id}/full': {
+        get: {
+          summary: 'Get board with columns and items',
+          description: 'Get a specific board with all columns and items',
+          operationId: 'getBoardWithColumns',
+          tags: ['Boards'],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'Board ID',
+            },
+          ],
+          responses: {
+            '200': { description: 'Board with columns and items' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Access denied' },
+            '404': { description: 'Board not found' },
+          },
+        },
+      },
     },
   });
 });
