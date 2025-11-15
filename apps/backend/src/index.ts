@@ -12,6 +12,7 @@ import {
   compression,
   timeout
 } from './middleware';
+import { swaggerUI } from '@hono/swagger-ui';
 import { AuthService } from './services/AuthService';
 import { isProduction, getCorsOrigins } from './utils/environment';
 
@@ -83,6 +84,17 @@ app.use('*', logger);
 // Error handler (must be after other middleware)
 app.use('*', errorHandler);
 
+// Swagger UI documentation route
+const swaggerUIMiddleware = swaggerUI({
+  url: '/openapi.json',
+  defaultModelsExpandDepth: 1,
+  defaultModelExpandDepth: 1,
+  docExpansion: 'list',
+  filter: true,
+});
+
+app.get('/docs', swaggerUIMiddleware);
+
 // Routes
 app.route('/', routes);
 
@@ -122,6 +134,132 @@ app.get('/health', async (c) => {
   }
 });
 
+// OpenAPI spec endpoint (serves the spec for Swagger UI)
+app.get('/openapi.json', (c) => {
+  return c.json({
+    openapi: '3.0.0',
+    info: {
+      title: 'Task Manager API',
+      version: '1.0.0',
+      description: 'Task Manager API with Bearer token authentication and enhanced security',
+    },
+    servers: [
+      {
+        url: `${process.env.API_URL || 'http://localhost:3001'}`,
+        description: 'API Server',
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description: 'JWT Bearer token obtained from /auth/login endpoint',
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
+    paths: {
+      '/auth/login': {
+        post: {
+          summary: 'Login',
+          description: 'Authenticate with email and password to get JWT token',
+          operationId: 'login',
+          tags: ['Auth'],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    email: { type: 'string', format: 'email', description: 'User email' },
+                    password: { type: 'string', format: 'password', description: 'User password' },
+                  },
+                  required: ['email', 'password'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Login successful',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      user: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer' },
+                          email: { type: 'string' },
+                          name: { type: 'string' },
+                          role: { type: 'string', enum: ['user', 'admin', 'superadmin'] },
+                          created_at: { type: 'string', format: 'date-time' },
+                          updated_at: { type: 'string', format: 'date-time' },
+                        },
+                      },
+                      token: { 
+                        type: 'string', 
+                        description: 'JWT access token (expires in 1 hour) - only returned in development mode'
+                      },
+                      refreshToken: { 
+                        type: 'string', 
+                        description: 'JWT refresh token (expires in 7 days) - only returned in development mode'
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            '400': {
+              description: 'Invalid credentials or validation error',
+            },
+          },
+        },
+      },
+      '/auth/register': {
+        post: {
+          summary: 'Register',
+          description: 'Create a new user account with strong password requirements',
+          operationId: 'register',
+          tags: ['Auth'],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    email: { type: 'string', format: 'email', description: 'User email' },
+                    password: { type: 'string', format: 'password', description: 'Password (12+ chars, uppercase, lowercase, number, special)' },
+                    name: { type: 'string', description: 'User full name (optional)' },
+                  },
+                  required: ['email', 'password'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Registration successful',
+            },
+            '400': {
+              description: 'Validation error or email already exists',
+            },
+          },
+        },
+      },
+    },
+  });
+});
+
 // 404 handler
 app.notFound((c) => {
   return c.json({ error: 'Not Found', path: c.req.path }, 404);
@@ -144,7 +282,7 @@ async function startServer() {
     hostname: process.env.HOST || '0.0.0.0'
   }, (info) => {
     console.log(`🚀 Server is running on http://localhost:${info.port}`);
-    console.log(`📚 API Documentation available at http://localhost:${info.port}`);
+    console.log(`📚 Swagger UI available at http://localhost:${info.port}/docs`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔒 CORS Origins: ${corsOrigins.join(', ')}`);
   });
