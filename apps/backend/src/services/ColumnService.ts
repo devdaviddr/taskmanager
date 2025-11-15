@@ -35,7 +35,7 @@ export class ColumnService {
       return await ColumnModel.create(boardId, columnData);
     } catch (error) {
       console.error('Service error - createColumn:', error);
-      if (error instanceof Error && error.message.includes('validation')) {
+      if (error instanceof Error && error.message.toLowerCase().includes('validation')) {
         throw error;
       }
       throw new Error('Failed to create column');
@@ -54,7 +54,7 @@ export class ColumnService {
       return column;
     } catch (error) {
       console.error('Service error - updateColumn:', error);
-      if (error instanceof Error && (error.message === 'Column not found or no changes made' || error.message.includes('validation'))) {
+      if (error instanceof Error && (error.message === 'Column not found or no changes made' || error.message.toLowerCase().includes('validation'))) {
         throw error;
       }
       throw new Error('Failed to update column');

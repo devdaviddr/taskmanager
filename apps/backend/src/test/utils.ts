@@ -69,6 +69,18 @@ export const testData = {
     background: 'bg-green-50',
     column_theme: 'dark',
   },
+  validColumn: {
+    name: 'Test Column',
+    position: 0,
+  },
+  validColumn2: {
+    name: 'In Progress',
+    position: 1,
+  },
+  validColumn3: {
+    name: 'Done',
+    position: 2,
+  },
 };
 
 // Authentication helpers
@@ -271,6 +283,97 @@ export const boards = {
   async delete(boardId: number, accessToken?: string) {
     const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
     const res = await app.request(`/api/boards/${boardId}`, {
+      method: 'DELETE',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+};
+
+// Column API helpers
+export const columns = {
+  /**
+   * Create a new column in a board
+   */
+  async create(boardId: number, columnData: any, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/boards/${boardId}/columns`, {
+      method: 'POST',
+      body: JSON.stringify(columnData),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Get all columns for a board
+   */
+  async getAll(boardId: number, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/boards/${boardId}/columns`, {
+      method: 'GET',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Get a specific column by ID (Note: no boardId needed in the URL)
+   */
+  async getById(columnId: number, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/columns/${columnId}`, {
+      method: 'GET',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Update a column (Note: no boardId needed in the URL)
+   */
+  async update(columnId: number, updates: any, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/columns/${columnId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Delete a column (Note: no boardId needed in the URL)
+   */
+  async delete(columnId: number, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/columns/${columnId}`, {
       method: 'DELETE',
       headers: cookieHeader ? { Cookie: cookieHeader } : {},
     });
