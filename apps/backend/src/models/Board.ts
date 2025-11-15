@@ -103,61 +103,61 @@ export class BoardModel {
       INSERT INTO boards (name, description, background, column_theme, archived, user_id, created_at, updated_at)
       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
       RETURNING id, name, description, background, column_theme, archived, user_id, created_at, updated_at
-    `, [boardData.name, boardData.description || null, boardData.background || 'bg-gray-50', boardData.column_theme || 'dark', boardData.archived || false, userId]);
+    `, [boardData.name, boardData.description || null, boardData.background || 'bg-gray-50', boardData.column_theme || 'light', boardData.archived || false, userId]);
     return result.rows[0];
   }
 
-  static async update(id: number, boardData: Partial<UpdateBoardRequest>): Promise<Board | null> {
-    const fields = [];
-    const values = [];
-    let paramCount = 1;
+   static async update(id: number, boardData: Partial<UpdateBoardRequest>): Promise<Board | null> {
+     const fields = [];
+     const values = [];
+     let paramCount = 1;
 
-    if (boardData.name !== undefined) {
-      fields.push(`name = $${paramCount}`);
-      values.push(boardData.name);
-      paramCount++;
-    }
+     if (boardData.name !== undefined) {
+       fields.push(`name = $${paramCount}`);
+       values.push(boardData.name);
+       paramCount++;
+     }
 
-    if (boardData.description !== undefined) {
-      fields.push(`description = $${paramCount}`);
-      values.push(boardData.description);
-      paramCount++;
-    }
+     if (boardData.description !== undefined) {
+       fields.push(`description = $${paramCount}`);
+       values.push(boardData.description);
+       paramCount++;
+     }
 
-    if ('background' in boardData) {
-      fields.push(`background = $${paramCount}`);
-      values.push(boardData.background);
-      paramCount++;
-    }
+     if ('background' in boardData) {
+       fields.push(`background = $${paramCount}`);
+       values.push(boardData.background);
+       paramCount++;
+     }
 
-    if ('column_theme' in boardData) {
-      fields.push(`column_theme = $${paramCount}`);
-      values.push(boardData.column_theme);
-      paramCount++;
-    }
+     if ('column_theme' in boardData) {
+       fields.push(`column_theme = $${paramCount}`);
+       values.push(boardData.column_theme);
+       paramCount++;
+     }
 
-    if ('archived' in boardData) {
-      fields.push(`archived = $${paramCount}`);
-      values.push(boardData.archived);
-      paramCount++;
-    }
+     if ('archived' in boardData) {
+       fields.push(`archived = $${paramCount}`);
+       values.push(boardData.archived);
+       paramCount++;
+     }
 
-    if (fields.length === 0) {
-      return null;
-    }
+     if (fields.length === 0) {
+       return null;
+     }
 
-    fields.push(`updated_at = NOW()`);
-    values.push(id);
+     fields.push(`updated_at = NOW()`);
+     values.push(id);
 
-    const result = await pool.query(`
-      UPDATE boards
-      SET ${fields.join(', ')}
-      WHERE id = $${paramCount}
-      RETURNING id, name, description, background, column_theme, archived, user_id, created_at, updated_at
-    `, values);
+     const result = await pool.query(`
+       UPDATE boards
+       SET ${fields.join(', ')}
+       WHERE id = $${paramCount}
+       RETURNING id, name, description, background, column_theme, archived, user_id, created_at, updated_at
+     `, values);
 
-    return result.rows[0] || null;
-  }
+     return result.rows[0] ?? null;
+   }
 
   static async delete(id: number): Promise<boolean> {
     const result = await pool.query('DELETE FROM boards WHERE id = $1', [id]);

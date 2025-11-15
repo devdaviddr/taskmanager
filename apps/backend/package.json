@@ -5,10 +5,15 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "migrate": "tsx src/migrate.ts"
+    "migrate": "tsx src/migrate.ts",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.5",
+    "@hono/swagger-ui": "^0.5.2",
+    "@hono/zod-openapi": "^1.1.4",
     "@types/pg": "^8.15.5",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
@@ -22,8 +27,10 @@
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^20.0.0",
+    "@types/node": "^20.19.25",
+    "@vitest/coverage-v8": "^4.0.9",
     "tsx": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.9"
   }
 }

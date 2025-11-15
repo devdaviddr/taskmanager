@@ -81,9 +81,6 @@ adminRoutes.delete('/users/:id', authMiddleware, requireAdmin, async (c: AppCont
     return c.json({ message: 'User deleted successfully' })
   } catch (error) {
     console.error('Error deleting user:', error)
-    if (error instanceof Error && error.message === 'Cannot delete user who owns boards') {
-      return c.json({ error: error.message }, 400)
-    }
     return c.json({ error: 'Failed to delete user' }, 500)
   }
 })

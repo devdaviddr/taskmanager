@@ -11,6 +11,15 @@ export class TaskService {
     }
   }
 
+  static async getAllTasksByUser(userId: number): Promise<Task[]> {
+    try {
+      return await TaskModel.findByUserId(userId);
+    } catch (error) {
+      console.error('Service error - getAllTasksByUser:', error);
+      throw new Error('Failed to retrieve user tasks');
+    }
+  }
+
   static async getTaskById(id: number): Promise<Task> {
     try {
       const task = await TaskModel.findById(id);
@@ -27,17 +36,17 @@ export class TaskService {
     }
   }
 
-  static async createTask(taskData: CreateTaskRequest): Promise<Task> {
+  static async createTask(taskData: CreateTaskRequest, userId: number): Promise<Task> {
     try {
       // Business logic validation
       this.validateCreateTaskData(taskData);
 
-      return await TaskModel.create(taskData);
+      return await TaskModel.create({ ...taskData, user_id: userId });
     } catch (error) {
       console.error('Service error - createTask:', error);
-      if (error instanceof Error && error.message.includes('validation')) {
-        throw error;
-      }
+       if (error instanceof Error && error.message.toLowerCase().includes('validation')) {
+         throw error;
+       }
       throw new Error('Failed to create task');
     }
   }
@@ -54,9 +63,9 @@ export class TaskService {
       return task;
     } catch (error) {
       console.error('Service error - updateTask:', error);
-      if (error instanceof Error && (error.message === 'Task not found or no changes made' || error.message.includes('validation'))) {
-        throw error;
-      }
+       if (error instanceof Error && (error.message === 'Task not found or no changes made' || error.message.toLowerCase().includes('validation'))) {
+         throw error;
+       }
       throw new Error('Failed to update task');
     }
   }
@@ -77,12 +86,16 @@ export class TaskService {
   }
 
   private static validateCreateTaskData(data: CreateTaskRequest): void {
-    if (!data.title || typeof data.title !== 'string') {
-      throw new Error('Validation error: Title is required and must be a string');
+    if (data.title === undefined || data.title === null) {
+      throw new Error('Validation error: Title is required');
     }
 
-    if (data.title.trim().length === 0) {
-      throw new Error('Validation error: Title cannot be empty');
+    if (typeof data.title !== 'string') {
+      throw new Error('Validation error: Title must be a string');
+    }
+
+    if (!data.title || data.title.trim().length === 0) {
+      throw new Error('Validation error: Title is required and cannot be empty');
     }
 
     if (data.title.length > 255) {
@@ -101,7 +114,7 @@ export class TaskService {
       }
 
       if (data.title.trim().length === 0) {
-        throw new Error('Validation error: Title cannot be empty');
+        throw new Error('Validation error: Title is required and cannot be empty');
       }
 
       if (data.title.length > 255) {

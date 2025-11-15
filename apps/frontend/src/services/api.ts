@@ -99,60 +99,65 @@ api.interceptors.response.use(
 // Legacy task API
 export const getHealth = () => api.get('/health')
 
+// Health API
+export const healthAPI = {
+  get: () => api.get('/health'),
+}
+
 // Users API
 export const usersAPI = {
-  getAll: () => api.get('/users'),
-  update: (id: number, data: { name?: string; email?: string }) => api.put(`/users/${id}`, data),
+  getAll: () => api.get('/api/users'),
+  update: (id: number, data: { name?: string; email?: string }) => api.put(`/api/users/${id}`, data),
 }
 
 // Admin API
 export const adminAPI = {
-  getAllUsers: () => api.get('/admin/users'),
-  updateUserDetails: (id: number, data: { role?: 'user' | 'admin' | 'superadmin'; name?: string; email?: string }) => api.put(`/admin/users/${id}`, data),
-  deleteUser: (id: number) => api.delete(`/admin/users/${id}`),
+  getAllUsers: () => api.get('/api/admin/users'),
+  updateUserDetails: (id: number, data: { role?: 'user' | 'admin' | 'superadmin'; name?: string; email?: string }) => api.put(`/api/admin/users/${id}`, data),
+  deleteUser: (id: number) => api.delete(`/api/admin/users/${id}`),
 }
 
 // Boards API
 export const boardsAPI = {
-  getAll: () => api.get('/boards'),
-  getById: (id: number) => api.get(`/boards/${id}`),
-  getWithColumns: (id: number) => api.get(`/boards/${id}/full`),
-  create: (data: { name: string; description?: string; background?: string; column_theme?: string }) => api.post('/boards', data),
-  update: (id: number, data: { name?: string; description?: string; background?: string; column_theme?: string; archived?: boolean }) => api.put(`/boards/${id}`, data),
-  delete: (id: number) => api.delete(`/boards/${id}`),
-  assignUser: (boardId: number, userId: number, role?: string) => api.post(`/boards/${boardId}/users`, { user_id: userId, role }),
-  removeUser: (boardId: number, userId: number) => api.delete(`/boards/${boardId}/users/${userId}`),
+  getAll: () => api.get('/api/boards'),
+  getById: (id: number) => api.get(`/api/boards/${id}`),
+  getWithColumns: (id: number) => api.get(`/api/boards/${id}/full`),
+  create: (data: { name: string; description?: string; background?: string; column_theme?: string }) => api.post('/api/boards', data),
+  update: (id: number, data: { name?: string; description?: string; background?: string; column_theme?: string; archived?: boolean }) => api.put(`/api/boards/${id}`, data),
+  delete: (id: number) => api.delete(`/api/boards/${id}`),
+  assignUser: (boardId: number, userId: number, role?: string) => api.post(`/api/boards/${boardId}/users`, { user_id: userId, role }),
+  removeUser: (boardId: number, userId: number) => api.delete(`/api/boards/${boardId}/users/${userId}`),
 }
 
 // Columns API
 export const columnsAPI = {
-  getByBoard: (boardId: number) => api.get(`/boards/${boardId}/columns`),
-  create: (boardId: number, data: { name: string; position?: number }) => api.post(`/boards/${boardId}/columns`, data),
-  update: (id: number, data: { name?: string; position?: number }) => api.put(`/columns/${id}`, data),
-  delete: (id: number) => api.delete(`/columns/${id}`),
-  move: (id: number, position: number) => api.put(`/columns/${id}/move`, { position }),
+  getByBoard: (boardId: number) => api.get(`/api/boards/${boardId}/columns`),
+  create: (boardId: number, data: { name: string; position?: number }) => api.post(`/api/boards/${boardId}/columns`, data),
+  update: (id: number, data: { name?: string; position?: number }) => api.put(`/api/columns/${id}`, data),
+  delete: (id: number) => api.delete(`/api/columns/${id}`),
+  move: (id: number, position: number) => api.put(`/api/columns/${id}/move`, { position }),
 }
 
 // Items API
 export const itemsAPI = {
-  getById: (id: number) => api.get(`/items/${id}`),
-  getByColumn: (columnId: number) => api.get(`/columns/${columnId}/items`),
-  create: (columnId: number, data: { title: string; description?: string; position?: number; start_date?: string; end_date?: string; effort?: number; label?: string; priority?: 'high' | 'medium' | 'low'; tag_ids?: number[]; user_ids?: number[] }) => api.post(`/columns/${columnId}/items`, data),
-  update: (id: number, data: { title?: string; description?: string; position?: number; start_date?: string; end_date?: string; effort?: number; label?: string | null; priority?: 'high' | 'medium' | 'low' | null; tag_ids?: number[]; user_ids?: number[] }) => api.put(`/items/${id}`, data),
-  archive: (id: number, archived: boolean = true) => api.put(`/items/${id}/archive`, { archived }),
-  delete: (id: number) => api.delete(`/items/${id}`),
-  move: (id: number, data: { column_id: number; position: number }) => api.put(`/items/${id}/move`, data),
-  assignUser: (itemId: number, userId: number) => api.post(`/items/${itemId}/users`, { user_id: userId }),
-  removeUser: (itemId: number, userId: number) => api.delete(`/items/${itemId}/users/${userId}`),
+  getById: (id: number) => api.get(`/api/items/${id}`),
+  getByColumn: (columnId: number) => api.get(`/api/columns/${columnId}/items`),
+  create: (columnId: number, data: { title: string; description?: string; position?: number; start_date?: string; end_date?: string; effort?: number; label?: string; priority?: 'high' | 'medium' | 'low'; tag_ids?: number[]; user_ids?: number[] }) => api.post(`/api/columns/${columnId}/items`, data),
+  update: (id: number, data: { title?: string; description?: string; position?: number; start_date?: string; end_date?: string; effort?: number; label?: string | null; priority?: 'high' | 'medium' | 'low' | null; tag_ids?: number[]; user_ids?: number[] }) => api.put(`/api/items/${id}`, data),
+  archive: (id: number, archived: boolean = true) => api.put(`/api/items/${id}/archive`, { archived }),
+  delete: (id: number) => api.delete(`/api/items/${id}`),
+  move: (id: number, data: { column_id: number; position: number }) => api.put(`/api/items/${id}/move`, data),
+  assignUser: (itemId: number, userId: number) => api.post(`/api/items/${itemId}/users`, { user_id: userId }),
+  removeUser: (itemId: number, userId: number) => api.delete(`/api/items/${itemId}/users/${userId}`),
 }
 
 // Tags API
 export const tagsAPI = {
-  getAll: () => api.get('/tags'),
-  getById: (id: number) => api.get(`/tags/${id}`),
-  create: (data: { name: string; color?: string }) => api.post('/tags', data),
-  update: (id: number, data: { name?: string; color?: string }) => api.put(`/tags/${id}`, data),
-  delete: (id: number) => api.delete(`/tags/${id}`),
+  getAll: () => api.get('/api/tags'),
+  getById: (id: number) => api.get(`/api/tags/${id}`),
+  create: (data: { name: string; color?: string }) => api.post('/api/tags', data),
+  update: (id: number, data: { name?: string; color?: string }) => api.put(`/api/tags/${id}`, data),
+  delete: (id: number) => api.delete(`/api/tags/${id}`),
 }
 
 export default api

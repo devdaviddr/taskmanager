@@ -4,7 +4,15 @@ import { pool } from '../config/database';
 import crypto from 'crypto';
 import type { User, CreateUserRequest, LoginRequest, AuthResponse } from '../types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+// Ensure JWT_SECRET is set, especially in production
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('CRITICAL: JWT_SECRET environment variable must be set in production');
+  }
+  console.warn('⚠️  Using insecure default JWT_SECRET - set JWT_SECRET environment variable for security');
+}
+const ACTUAL_JWT_SECRET = JWT_SECRET || 'development-only-insecure-key-do-not-use-in-production';
 const JWT_EXPIRES_IN = '1h';
 const REFRESH_TOKEN_EXPIRES_IN = '7d';
 
@@ -15,14 +23,23 @@ export class AuthService {
       email: user.email,
       name: user.name,
       role: user.role,
+      jti: crypto.randomUUID(), // Add unique identifier for token uniqueness
     };
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    return jwt.sign(payload, ACTUAL_JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
   }
 
   static verifyToken(token: string): any {
     try {
-      return jwt.verify(token, JWT_SECRET);
+      const result = jwt.verify(token, ACTUAL_JWT_SECRET);
+      if (process.env.NODE_ENV === 'test') {
+        console.log('[verifyToken] Token verified successfully, payload:', { id: result.id, email: result.email, jti: result.jti?.substring(0, 8) });
+      }
+      return result;
     } catch (error) {
+      if (process.env.NODE_ENV === 'test') {
+        console.log('[verifyToken] Token verification failed:', (error as Error).message);
+        console.log('[verifyToken] ACTUAL_JWT_SECRET length:', ACTUAL_JWT_SECRET.length);
+      }
       return null;
     }
   }
@@ -87,6 +104,10 @@ export class AuthService {
       // Calculate expiration time from token payload
       const expiresAt = new Date(payload.exp * 1000);
 
+      if (process.env.NODE_ENV === 'test') {
+        console.log('[blacklistToken] Blacklisting token with hash:', tokenHash.substring(0, 16) + '...');
+      }
+
       await pool.query(
         'INSERT INTO invalidated_tokens (token_hash, expires_at) VALUES ($1, $2) ON CONFLICT (token_hash) DO NOTHING',
         [tokenHash, expiresAt]
@@ -100,10 +121,18 @@ export class AuthService {
     try {
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
+      if (process.env.NODE_ENV === 'test' && token.length > 100) {
+        console.log('[isTokenBlacklisted] Checking token with hash:', tokenHash.substring(0, 16) + '...');
+      }
+
       const result = await pool.query(
         'SELECT 1 FROM invalidated_tokens WHERE token_hash = $1 AND expires_at > NOW()',
         [tokenHash]
       );
+
+      if (process.env.NODE_ENV === 'test' && token.length > 100) {
+        console.log('[isTokenBlacklisted] Found in blacklist:', result.rows.length > 0);
+      }
 
       return result.rows.length > 0;
     } catch (error) {

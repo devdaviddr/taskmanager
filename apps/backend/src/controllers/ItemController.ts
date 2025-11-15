@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { ItemService } from '../services/ItemService';
 import type { CreateItemRequest, MoveItemRequest } from '../types';
+import { checkBoardOwnershipViaItem, checkBoardOwnershipViaColumn, checkBoardAccessViaItem, checkBoardAccessViaColumn } from '../utils/auth';
 
 export class ItemController {
   static async get(c: Context) {
@@ -8,6 +9,23 @@ export class ItemController {
       const id = parseInt(c.req.param('id'));
       if (isNaN(id)) {
         return c.json({ error: 'Invalid item ID' }, 400);
+      }
+
+      const user = c.get('user');
+      
+      // Check board access via item (owner or assigned to tasks)
+      try {
+        await checkBoardAccessViaItem(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Item not found' || error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
       }
 
       const item = await ItemService.getItemById(id);
@@ -28,6 +46,23 @@ export class ItemController {
         return c.json({ error: 'Invalid column ID' }, 400);
       }
 
+      const user = c.get('user');
+      
+      // Check board access via column (owner or assigned to tasks)
+      try {
+        await checkBoardAccessViaColumn(columnId, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Column not found' || error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
+      }
+
       const items = await ItemService.getItemsByColumn(columnId);
       return c.json(items);
     } catch (error) {
@@ -41,6 +76,26 @@ export class ItemController {
       const columnId = parseInt(c.req.param('columnId'));
       if (isNaN(columnId)) {
         return c.json({ error: 'Invalid column ID' }, 400);
+      }
+
+      const user = c.get('user');
+      
+      // Check board ownership via column
+      try {
+        await checkBoardOwnershipViaColumn(columnId, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Column not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
       }
 
       const body: CreateItemRequest = await c.req.json();
@@ -59,6 +114,10 @@ export class ItemController {
       if (error instanceof Error && error.message.includes('Validation error')) {
         return c.json({ error: error.message }, 400);
       }
+      // Check for database constraint violations (foreign key, etc.)
+      if (error instanceof Error && error.message.includes('violates foreign key constraint')) {
+        return c.json({ error: 'Invalid column ID' }, 400);
+      }
       return c.json({ error: 'Internal server error' }, 500);
     }
   }
@@ -68,6 +127,23 @@ export class ItemController {
       const id = parseInt(c.req.param('id'));
       if (isNaN(id)) {
         return c.json({ error: 'Invalid item ID' }, 400);
+      }
+
+      const user = c.get('user');
+      
+      // Check board ownership via item
+      try {
+        await checkBoardOwnershipViaItem(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Item not found' || error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
       }
 
       const body: Partial<CreateItemRequest> = await c.req.json();
@@ -98,6 +174,23 @@ export class ItemController {
         return c.json({ error: 'Invalid item ID' }, 400);
       }
 
+      const user = c.get('user');
+      
+      // Check board ownership via item
+      try {
+        await checkBoardOwnershipViaItem(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Item not found' || error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
+      }
+
       const body: MoveItemRequest = await c.req.json();
 
       const item = await ItemService.moveItem(id, body);
@@ -118,6 +211,23 @@ export class ItemController {
         return c.json({ error: 'Invalid item ID' }, 400);
       }
 
+      const user = c.get('user');
+      
+      // Check board ownership via item
+      try {
+        await checkBoardOwnershipViaItem(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Item not found' || error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
+      }
+
       await ItemService.deleteItem(id);
       return c.json({ message: 'Item deleted successfully' });
     } catch (error) {
@@ -134,6 +244,23 @@ export class ItemController {
       const id = parseInt(c.req.param('id'));
       if (isNaN(id)) {
         return c.json({ error: 'Invalid item ID' }, 400);
+      }
+
+      const user = c.get('user');
+      
+      // Check board ownership via item
+      try {
+        await checkBoardOwnershipViaItem(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Item not found' || error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
       }
 
       const body = await c.req.json();
@@ -155,6 +282,23 @@ export class ItemController {
       const itemId = parseInt(c.req.param('id'));
       if (isNaN(itemId)) {
         return c.json({ error: 'Invalid item ID' }, 400);
+      }
+
+      const user = c.get('user');
+      
+      // Check board ownership via item
+      try {
+        await checkBoardOwnershipViaItem(itemId, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Item not found' || error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
       }
 
       const body = await c.req.json();
@@ -181,6 +325,23 @@ export class ItemController {
       const userId = parseInt(c.req.param('userId'));
       if (isNaN(itemId) || isNaN(userId)) {
         return c.json({ error: 'Invalid IDs' }, 400);
+      }
+
+      const user = c.get('user');
+      
+      // Check board ownership via item
+      try {
+        await checkBoardOwnershipViaItem(itemId, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Item not found' || error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
       }
 
       const success = await ItemService.removeUserFromItem(itemId, userId);

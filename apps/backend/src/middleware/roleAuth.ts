@@ -21,7 +21,7 @@ export const requireRole = (requiredRole: UserRole): MiddlewareHandler => {
       return c.json({ error: 'Insufficient permissions' }, 403);
     }
 
-    await next();
+    return await next();
   };
 };
 

@@ -1,11 +1,13 @@
 import type { Context } from 'hono';
 import { TaskService } from '../services/TaskService';
 import type { CreateTaskRequest, UpdateTaskRequest } from '../types';
+import { checkTaskOwnership } from '../utils/auth';
 
 export class TaskController {
   static async getAll(c: Context) {
     try {
-      const tasks = await TaskService.getAllTasks();
+      const user = c.get('user');
+      const tasks = await TaskService.getAllTasksByUser(user.id);
       return c.json(tasks);
     } catch (error) {
       console.error('Controller error - getAll:', error);
@@ -18,6 +20,23 @@ export class TaskController {
       const id = parseInt(c.req.param('id'));
       if (isNaN(id)) {
         return c.json({ error: 'Invalid task ID' }, 400);
+      }
+
+      const user = c.get('user');
+      
+      // Check task ownership
+      try {
+        await checkTaskOwnership(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Task not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
       }
 
       const task = await TaskService.getTaskById(id);
@@ -34,8 +53,9 @@ export class TaskController {
   static async create(c: Context) {
     try {
       const body: CreateTaskRequest = await c.req.json();
-
-      const task = await TaskService.createTask(body);
+      const user = c.get('user');
+      
+      const task = await TaskService.createTask(body, user.id);
       return c.json(task, 201);
     } catch (error) {
       console.error('Controller error - create:', error);
@@ -51,6 +71,23 @@ export class TaskController {
       const id = parseInt(c.req.param('id'));
       if (isNaN(id)) {
         return c.json({ error: 'Invalid task ID' }, 400);
+      }
+
+      const user = c.get('user');
+      
+      // Check task ownership
+      try {
+        await checkTaskOwnership(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Task not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
       }
 
       const body: UpdateTaskRequest = await c.req.json();
@@ -71,6 +108,23 @@ export class TaskController {
       const id = parseInt(c.req.param('id'));
       if (isNaN(id)) {
         return c.json({ error: 'Invalid task ID' }, 400);
+      }
+
+      const user = c.get('user');
+      
+      // Check task ownership
+      try {
+        await checkTaskOwnership(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Task not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
       }
 
       await TaskService.deleteTask(id);

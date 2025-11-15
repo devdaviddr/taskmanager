@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { BoardService } from '../services/BoardService';
 import type { CreateBoardRequest, UpdateBoardRequest } from '../types';
+import { checkBoardOwnership, checkBoardAccess } from '../utils/auth';
 
 export class BoardController {
   static async getAll(c: Context) {
@@ -21,6 +22,23 @@ export class BoardController {
         return c.json({ error: 'Invalid board ID' }, 400);
       }
 
+      const user = c.get('user');
+      
+      // Check board access (owner or assigned to tasks)
+      try {
+        await checkBoardAccess(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
+      }
+
       const board = await BoardService.getBoardById(id);
       return c.json(board);
     } catch (error) {
@@ -37,6 +55,23 @@ export class BoardController {
       const id = parseInt(c.req.param('id'));
       if (isNaN(id)) {
         return c.json({ error: 'Invalid board ID' }, 400);
+      }
+
+      const user = c.get('user');
+      
+      // Check board access (owner or assigned to tasks)
+      try {
+        await checkBoardAccess(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
       }
 
       const board = await BoardService.getBoardWithColumns(id);
@@ -73,6 +108,23 @@ export class BoardController {
         return c.json({ error: 'Invalid board ID' }, 400);
       }
 
+      const user = c.get('user');
+      
+      // Check board ownership
+      try {
+        await checkBoardOwnership(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
+      }
+
       const body: Partial<UpdateBoardRequest> = await c.req.json();
       const board = await BoardService.updateBoard(id, body);
 
@@ -91,6 +143,23 @@ export class BoardController {
       const id = parseInt(c.req.param('id'));
       if (isNaN(id)) {
         return c.json({ error: 'Invalid board ID' }, 400);
+      }
+
+      const user = c.get('user');
+      
+      // Check board ownership
+      try {
+        await checkBoardOwnership(id, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
       }
 
       await BoardService.deleteBoard(id);

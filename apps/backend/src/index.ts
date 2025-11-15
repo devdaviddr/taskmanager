@@ -12,6 +12,7 @@ import {
   compression,
   timeout
 } from './middleware';
+import { swaggerUI } from '@hono/swagger-ui';
 import { AuthService } from './services/AuthService';
 import { isProduction, getCorsOrigins } from './utils/environment';
 
@@ -20,7 +21,32 @@ const app = new Hono();
 // Environment-aware CORS configuration
 const corsOrigins = getCorsOrigins();
 
-// Rate limiting
+// Rate limiting - strict limits for auth endpoints
+app.use('/auth/login', rateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 5, // Only 5 login attempts per 15 minutes
+  standardHeaders: true,
+  keyGenerator: (c) => {
+    return c.req.header('CF-Connecting-IP') ||
+           c.req.header('X-Forwarded-For') ||
+           c.req.header('X-Real-IP') ||
+           'unknown';
+  },
+}));
+
+app.use('/auth/register', rateLimiter({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 3, // Only 3 registration attempts per hour
+  standardHeaders: true,
+  keyGenerator: (c) => {
+    return c.req.header('CF-Connecting-IP') ||
+           c.req.header('X-Forwarded-For') ||
+           c.req.header('X-Real-IP') ||
+           'unknown';
+  },
+}));
+
+// Global rate limiting
 app.use('*', rateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   limit: isProduction ? 100 : 1000, // stricter in production
@@ -57,6 +83,17 @@ app.use('*', logger);
 
 // Error handler (must be after other middleware)
 app.use('*', errorHandler);
+
+// Swagger UI documentation route
+const swaggerUIMiddleware = swaggerUI({
+  url: '/openapi.json',
+  defaultModelsExpandDepth: 1,
+  defaultModelExpandDepth: 1,
+  docExpansion: 'list',
+  filter: true,
+});
+
+app.get('/docs', swaggerUIMiddleware);
 
 // Routes
 app.route('/', routes);
@@ -97,6 +134,15 @@ app.get('/health', async (c) => {
   }
 });
 
+// Import OpenAPI spec generator
+import { generateOpenAPISpec } from './openapi/spec';
+
+// OpenAPI spec endpoint (serves the spec for Swagger UI)
+app.get('/openapi.json', (c) => {
+  const baseUrl = process.env.API_URL || 'http://localhost:3001';
+  return c.json(generateOpenAPISpec(baseUrl));
+});
+
 // 404 handler
 app.notFound((c) => {
   return c.json({ error: 'Not Found', path: c.req.path }, 404);
@@ -119,7 +165,7 @@ async function startServer() {
     hostname: process.env.HOST || '0.0.0.0'
   }, (info) => {
     console.log(`🚀 Server is running on http://localhost:${info.port}`);
-    console.log(`📚 API Documentation available at http://localhost:${info.port}`);
+    console.log(`📚 Swagger UI available at http://localhost:${info.port}/docs`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔒 CORS Origins: ${corsOrigins.join(', ')}`);
   });

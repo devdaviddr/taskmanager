@@ -32,6 +32,54 @@ async function runMigrations() {
     // Create index on email
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);`);
 
+    // Create boards table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS boards (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        background VARCHAR(255) DEFAULT 'bg-gray-50',
+        column_theme VARCHAR(255) DEFAULT 'light',
+        archived BOOLEAN NOT NULL DEFAULT FALSE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `);
+
+    // Create columns table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS columns (
+        id SERIAL PRIMARY KEY,
+        board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+        name VARCHAR(100) NOT NULL,
+        position INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+        UNIQUE(board_id, name) -- Prevent duplicate column names per board
+      );
+    `);
+
+    // Create items table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS items (
+        id SERIAL PRIMARY KEY,
+        column_id INTEGER NOT NULL REFERENCES columns(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        position INTEGER NOT NULL DEFAULT 0,
+        start_date TIMESTAMP WITH TIME ZONE,
+        end_date TIMESTAMP WITH TIME ZONE,
+        effort INTEGER CHECK (effort >= 0 AND effort <= 10),
+        label TEXT,
+        priority VARCHAR(10) CHECK (priority IN ('high', 'medium', 'low')),
+        archived BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `);
+
     // Create tags table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS tags (
@@ -100,6 +148,13 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);`);
+
+    // Update existing boards with NULL column_theme to 'light'
+    await pool.query(`
+      UPDATE boards
+      SET column_theme = 'light'
+      WHERE column_theme IS NULL;
+    `);
 
     console.log('✅ Migrations completed successfully');
   } catch (error) {

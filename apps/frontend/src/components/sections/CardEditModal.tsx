@@ -3,6 +3,7 @@ import Button from '../ui/Button'
 import Input from '../ui/Input'
 import Textarea from '../ui/Textarea'
 import Select from '../ui/Select'
+import PillInput from '../ui/PillInput'
 import { useState } from 'react'
 
 interface User {
@@ -215,31 +216,14 @@ export default function CardEditModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Tags
             </label>
-            <div className="flex flex-wrap gap-1 mb-2">
-              {editTags.map(tag => (
-                <span
-                  key={tag.id}
-                  className="inline-flex items-center text-xs px-2 py-1 rounded-full text-white"
-                  style={{ backgroundColor: tag.color }}
-                >
-                  {tag.name}
-                  <button
-                    type="button"
-                    onClick={() => onTagsChange(editTags.filter(t => t.id !== tag.id))}
-                    className="ml-1 text-white hover:text-gray-200"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-            <Input
-              type="text"
+            <PillInput
+              pills={editTags.map(tag => ({ id: tag.id, name: tag.name, removable: true }))}
               value={tagInput}
-              onChange={(e) => {
-                setTagInput(e.target.value)
+              onChange={(value) => {
+                setTagInput(value)
                 setShowTagDropdown(true)
               }}
+              onPillRemove={(id) => onTagsChange(editTags.filter(t => t.id !== id))}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
@@ -268,7 +252,7 @@ export default function CardEditModal({
               placeholder="Type to add or create tag..."
             />
             {showTagDropdown && (
-              <div className="absolute z-[60] bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto w-full mt-1">
+              <div className="absolute z-[60] bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto w-full bottom-full mb-1">
                 {filteredTags.length > 0 ? (
                   filteredTags.map(tag => (
                     <div
@@ -295,36 +279,20 @@ export default function CardEditModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Assigned Users
             </label>
-            <div className="flex flex-wrap gap-1 mb-2">
-              {editUsers.map(user => (
-                <span
-                  key={user.id}
-                  className="inline-flex items-center text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800"
-                >
-                  {user.name || user.email}
-                  <button
-                    type="button"
-                    onClick={() => onUsersChange(editUsers.filter(u => u.id !== user.id))}
-                    className="ml-1 text-blue-600 hover:text-blue-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-            <Input
-              type="text"
+            <PillInput
+              pills={editUsers.map(user => ({ id: user.id, name: user.name || user.email, removable: true }))}
               value={userInput}
-              onChange={(e) => {
-                setUserInput(e.target.value)
+              onChange={(value) => {
+                setUserInput(value)
                 setShowUserDropdown(true)
               }}
+              onPillRemove={(id) => onUsersChange(editUsers.filter(u => u.id !== id))}
               onFocus={() => setShowUserDropdown(true)}
               onBlur={() => setTimeout(() => setShowUserDropdown(false), 100)}
               placeholder="Type to search and assign users..."
             />
             {showUserDropdown && (
-              <div className="absolute z-[60] bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto w-full mt-1">
+              <div className="absolute z-[60] bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto w-full bottom-full mb-1">
                 {filteredUsers.length > 0 ? (
                   filteredUsers.map(user => (
                     <div

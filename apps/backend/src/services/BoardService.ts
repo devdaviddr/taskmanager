@@ -51,7 +51,7 @@ export class BoardService {
       return await BoardModel.create(boardData, userId);
     } catch (error) {
       console.error('Service error - createBoard:', error);
-      if (error instanceof Error && error.message.includes('validation')) {
+      if (error instanceof Error && error.message.toLowerCase().includes('validation')) {
         throw error;
       }
       throw new Error('Failed to create board');

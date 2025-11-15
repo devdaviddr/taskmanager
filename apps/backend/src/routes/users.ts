@@ -15,9 +15,25 @@ const userRoutes = new Hono<{ Variables: Variables }>();
 
 userRoutes.get('/users', authMiddleware, async (c: AppContext) => {
   try {
-    // For now, return all users. In a real app, you might want to filter by organization/team
-    const users = await UserModel.findAll();
-    return c.json(users);
+    const currentUser = c.get('user');
+    
+    // If user is admin/superadmin, return all users
+    if (currentUser.role === 'admin' || currentUser.role === 'superadmin') {
+      const users = await UserModel.findAll();
+      return c.json(users);
+    }
+    
+    // Otherwise, return only the current user's data
+    const userData = await UserModel.findById(currentUser.id);
+    if (!userData) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+    
+    // Remove sensitive fields for regular users
+    const { password_hash, ...safeUserData } = userData;
+    
+    // Return as array for consistency with admin response
+    return c.json([safeUserData]);
   } catch (error) {
     console.error('Error fetching users:', error);
     return c.json({ error: 'Internal server error' }, 500);
@@ -33,6 +49,11 @@ userRoutes.put('/users/:id', authMiddleware, async (c: AppContext) => {
     const currentUser = c.get('user');
     if (currentUser.id !== id) {
       return c.json({ error: 'Unauthorized' }, 403);
+    }
+
+    // Users cannot update their own role through this endpoint
+    if (userData.role !== undefined) {
+      return c.json({ error: 'Cannot update role through this endpoint' }, 403);
     }
 
     const updatedUser = await UserModel.update(id, userData);

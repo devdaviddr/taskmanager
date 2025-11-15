@@ -41,9 +41,9 @@ export class TagService {
       return await TagModel.create(tagData);
     } catch (error) {
       console.error('Service error - createTag:', error);
-      if (error instanceof Error && (error.message.includes('validation') || error.message === 'Tag with this name already exists')) {
-        throw error;
-      }
+       if (error instanceof Error && (error.message.toLowerCase().includes('validation') || error.message === 'Tag with this name already exists')) {
+         throw error;
+       }
       throw new Error('Failed to create tag');
     }
   }
@@ -68,9 +68,9 @@ export class TagService {
       return tag;
     } catch (error) {
       console.error('Service error - updateTag:', error);
-      if (error instanceof Error && (error.message === 'Tag not found or no changes made' || error.message.includes('validation') || error.message === 'Tag with this name already exists')) {
-        throw error;
-      }
+       if (error instanceof Error && (error.message === 'Tag not found or no changes made' || error.message.toLowerCase().includes('validation') || error.message === 'Tag with this name already exists')) {
+         throw error;
+       }
       throw new Error('Failed to update tag');
     }
   }
@@ -150,10 +150,12 @@ export class TagService {
   }
 
   private static validateCreateTagData(data: CreateTagRequest): void {
-    if (!data.name || typeof data.name !== 'string') {
+    // Check if name is a string first
+    if (typeof data.name !== 'string') {
       throw new Error('Validation error: Name is required and must be a string');
     }
 
+    // Then check if it's empty
     if (data.name.trim().length === 0) {
       throw new Error('Validation error: Name cannot be empty');
     }

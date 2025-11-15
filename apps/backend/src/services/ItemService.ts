@@ -35,7 +35,11 @@ export class ItemService {
       return await ItemModel.create(columnId, itemData);
     } catch (error) {
       console.error('Service error - createItem:', error);
-      if (error instanceof Error && error.message.includes('validation')) {
+      if (error instanceof Error && error.message.toLowerCase().includes('validation')) {
+        throw error;
+      }
+      // Re-throw database constraint errors
+      if (error instanceof Error && error.message.includes('violates foreign key constraint')) {
         throw error;
       }
       throw new Error('Failed to create item');
