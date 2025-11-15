@@ -19,6 +19,8 @@ beforeEach(async () => {
     await testPool.query('DELETE FROM columns');
     await testPool.query('DELETE FROM tags');
     await testPool.query('DELETE FROM boards');
+    await testPool.query('DELETE FROM board_users');
+    await testPool.query('DELETE FROM invalidated_tokens');
     await testPool.query('DELETE FROM refresh_tokens');
     await testPool.query('DELETE FROM users');
     console.log('✅ Test data cleaned up');
