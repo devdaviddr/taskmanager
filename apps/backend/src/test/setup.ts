@@ -3,30 +3,51 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Test database configuration
-const testDatabaseUrl = process.env.TEST_DATABASE_URL || 'postgresql://postgres:password@localhost:5432/taskmanager_test';
+// Test database configuration - will be updated by global setup
+let testDatabaseUrl = process.env.TEST_DATABASE_URL || 'postgresql://postgres:password@localhost:5432/taskmanager_test';
 
-export const testPool = new Pool({
-  connectionString: testDatabaseUrl,
-  max: 5,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+// Create test pool - will be recreated if URL changes
+let testPoolInstance: Pool | null = null;
+
+export const getTestPool = (): Pool => {
+  const currentUrl = process.env.DATABASE_URL || testDatabaseUrl;
+  if (!testPoolInstance || testPoolInstance.options.connectionString !== currentUrl) {
+    // Close existing pool if URL changed
+    if (testPoolInstance) {
+      testPoolInstance.end().catch(() => {});
+    }
+    testPoolInstance = new Pool({
+      connectionString: currentUrl,
+      max: 1,  // Reduced from 5 to minimize CPU usage during tests
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
+  }
+  return testPoolInstance;
+};
+
+// For backward compatibility
+export const testPool = getTestPool();
 
 // Teardown test database
 export const teardownTestDatabase = async (): Promise<void> => {
   try {
-    await testPool.end();
+    if (testPoolInstance) {
+      await testPoolInstance.end();
+      testPoolInstance = null;
+    }
   } catch (error) {
     // Ignore pool close errors
   }
 
   // Optionally drop the test database
   try {
+    const adminConnectionString = process.env.DATABASE_URL?.replace('/taskmanager_test', '/postgres') ||
+                                  'postgresql://postgres:password@localhost:5432/postgres';
     const adminPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: adminConnectionString,
     });
-    
+
     // Terminate all connections
     await adminPool.query(`
       SELECT pg_terminate_backend(pg_stat_activity.pid)
@@ -36,11 +57,11 @@ export const teardownTestDatabase = async (): Promise<void> => {
     `).catch(() => {
       // Ignore if database doesn't exist
     });
-    
+
     await adminPool.query('DROP DATABASE IF EXISTS taskmanager_test WITH (FORCE)').catch(() => {
       // Ignore errors
     });
-    
+
     await adminPool.end();
   } catch (error) {
     console.warn('Failed to drop test database:', (error as Error).message);

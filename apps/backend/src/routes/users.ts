@@ -29,8 +29,11 @@ userRoutes.get('/users', authMiddleware, async (c: AppContext) => {
       return c.json({ error: 'User not found' }, 404);
     }
     
+    // Remove sensitive fields for regular users
+    const { password_hash, ...safeUserData } = userData;
+    
     // Return as array for consistency with admin response
-    return c.json([userData]);
+    return c.json([safeUserData]);
   } catch (error) {
     console.error('Error fetching users:', error);
     return c.json({ error: 'Internal server error' }, 500);
@@ -46,6 +49,11 @@ userRoutes.put('/users/:id', authMiddleware, async (c: AppContext) => {
     const currentUser = c.get('user');
     if (currentUser.id !== id) {
       return c.json({ error: 'Unauthorized' }, 403);
+    }
+
+    // Users cannot update their own role through this endpoint
+    if (userData.role !== undefined) {
+      return c.json({ error: 'Cannot update role through this endpoint' }, 403);
     }
 
     const updatedUser = await UserModel.update(id, userData);

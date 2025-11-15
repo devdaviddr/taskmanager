@@ -210,9 +210,12 @@ describe('Board API', () => {
       const user2 = await auth.register(testData.validUser2);
 
       const user1Board = await boards.create(testData.validBoard, user1.accessToken);
+      console.log('Board created with ID:', user1Board.data.id, typeof user1Board.data.id);
+      console.log('Board creation result:', user1Board);
 
       // User 2 tries to delete user 1's board
       const result = await boards.delete(user1Board.data.id, user2.accessToken);
+      console.log('Delete result:', result.status, result.data);
 
       expect(result.status).toBe(403);
 

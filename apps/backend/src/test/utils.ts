@@ -1,8 +1,17 @@
 // Mock environment variables for tests BEFORE importing anything else
-process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://postgres:password@localhost:5432/taskmanager_test';
-process.env.JWT_SECRET = 'test-jwt-secret';
-process.env.NODE_ENV = 'test';
-process.env.DISABLE_RATE_LIMITING = 'true'; // Disable rate limiting in tests
+// Only set if not already set by vitest-setup.ts
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://postgres:password@localhost:5432/taskmanager_test';
+}
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'test-jwt-secret';
+}
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = 'test';
+}
+if (!process.env.DISABLE_RATE_LIMITING) {
+  process.env.DISABLE_RATE_LIMITING = 'true'; // Disable rate limiting in tests
+}
 
 import { testPool } from './setup';
 import app from '../app';
@@ -32,7 +41,7 @@ export const parseResponse = async (response: Response) => {
   }
 };
 
-// Delay helper for rate limit safety
+// Delay helper for rate limit safety and CPU throttling
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Test data factories
@@ -119,6 +128,7 @@ export const auth = {
    * Register a new user and return user data + tokens
    */
   async register(userData = testData.validUser) {
+    await delay(10); // Throttle to reduce CPU load
     const res = await app.request('/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
@@ -139,6 +149,7 @@ export const auth = {
    * Login a user and return user data + tokens
    */
   async login(email = testData.validUser.email, password = testData.validUser.password) {
+    await delay(10); // Throttle to reduce CPU load
     const res = await app.request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),

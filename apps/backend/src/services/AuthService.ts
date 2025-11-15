@@ -30,8 +30,16 @@ export class AuthService {
 
   static verifyToken(token: string): any {
     try {
-      return jwt.verify(token, ACTUAL_JWT_SECRET);
+      const result = jwt.verify(token, ACTUAL_JWT_SECRET);
+      if (process.env.NODE_ENV === 'test') {
+        console.log('[verifyToken] Token verified successfully, payload:', { id: result.id, email: result.email, jti: result.jti?.substring(0, 8) });
+      }
+      return result;
     } catch (error) {
+      if (process.env.NODE_ENV === 'test') {
+        console.log('[verifyToken] Token verification failed:', (error as Error).message);
+        console.log('[verifyToken] ACTUAL_JWT_SECRET length:', ACTUAL_JWT_SECRET.length);
+      }
       return null;
     }
   }
