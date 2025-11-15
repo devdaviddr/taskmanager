@@ -34,11 +34,11 @@ router.get('/health', async (c) => {
 // Mount routes
 router.route('/auth', authRoutes);
 router.route('/admin', adminRoutes);
-router.route('/', userRoutes);
-router.route('/', taskRoutes);
-router.route('/', boardRoutes);
-router.route('/', columnRoutes);
-router.route('/', itemRoutes);
-router.route('/', tagRoutes);
+router.route('/api', userRoutes);
+router.route('/api', taskRoutes);
+router.route('/api', boardRoutes);
+router.route('/api', columnRoutes);
+router.route('/api', itemRoutes);
+router.route('/api', tagRoutes);
 
 export default router;
