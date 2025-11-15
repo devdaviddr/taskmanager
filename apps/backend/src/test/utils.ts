@@ -81,6 +81,36 @@ export const testData = {
     name: 'Done',
     position: 2,
   },
+  validItem: {
+    title: 'Test Item',
+    description: 'A test item for integration tests',
+    position: 0,
+    effort: 5,
+    priority: 'high' as const,
+  },
+  validItem2: {
+    title: 'Another Test Item',
+    description: 'Another test item',
+    position: 1,
+    effort: 3,
+    priority: 'medium' as const,
+  },
+  validTag: {
+    name: 'Bug',
+    color: '#ff0000',
+  },
+  validTag2: {
+    name: 'Feature',
+    color: '#00ff00',
+  },
+  validTask: {
+    title: 'Test Task',
+    description: 'A test task for integration tests',
+  },
+  validTask2: {
+    title: 'Another Test Task',
+    description: 'Another test task',
+  },
 };
 
 // Authentication helpers
@@ -374,6 +404,355 @@ export const columns = {
   async delete(columnId: number, accessToken?: string) {
     const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
     const res = await app.request(`/api/columns/${columnId}`, {
+      method: 'DELETE',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+};
+
+// Item API helpers
+export const items = {
+  /**
+   * Create a new item in a column
+   */
+  async create(columnId: number, itemData: any, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/columns/${columnId}/items`, {
+      method: 'POST',
+      body: JSON.stringify(itemData),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Get a specific item by ID
+   */
+  async getById(itemId: number, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/items/${itemId}`, {
+      method: 'GET',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Get all items for a column
+   */
+  async getByColumn(columnId: number, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/columns/${columnId}/items`, {
+      method: 'GET',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Update an item
+   */
+  async update(itemId: number, updates: any, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/items/${itemId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Move an item to a different column/position
+   */
+  async move(itemId: number, moveData: any, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/items/${itemId}/move`, {
+      method: 'PUT',
+      body: JSON.stringify(moveData),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Archive/unarchive an item
+   */
+  async archive(itemId: number, archived: boolean, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/items/${itemId}/archive`, {
+      method: 'PUT',
+      body: JSON.stringify({ archived }),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Delete an item
+   */
+  async delete(itemId: number, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/items/${itemId}`, {
+      method: 'DELETE',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Assign a user to an item
+   */
+  async assignUser(itemId: number, userId: number, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/items/${itemId}/users`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId }),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Remove a user from an item
+   */
+  async removeUser(itemId: number, userId: number, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/items/${itemId}/users/${userId}`, {
+      method: 'DELETE',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+};
+
+// Tag API helpers
+export const tags = {
+  /**
+   * Create a new tag
+   */
+  async create(tagData: any, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request('/api/tags', {
+      method: 'POST',
+      body: JSON.stringify(tagData),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Get all tags
+   */
+  async getAll(accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request('/api/tags', {
+      method: 'GET',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Get a specific tag by ID
+   */
+  async getById(tagId: number, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/tags/${tagId}`, {
+      method: 'GET',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Update a tag
+   */
+  async update(tagId: number, updates: any, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/tags/${tagId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Delete a tag
+   */
+  async delete(tagId: number, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/tags/${tagId}`, {
+      method: 'DELETE',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+};
+
+// Task API helpers
+export const tasks = {
+  /**
+   * Create a new task
+   */
+  async create(taskData: any, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request('/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify(taskData),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Get all tasks for authenticated user
+   */
+  async getAll(accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request('/api/tasks', {
+      method: 'GET',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Get a specific task by ID
+   */
+  async getById(taskId: number, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/tasks/${taskId}`, {
+      method: 'GET',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Update a task
+   */
+  async update(taskId: number, updates: any, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/tasks/${taskId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Delete a task
+   */
+  async delete(taskId: number, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/tasks/${taskId}`, {
       method: 'DELETE',
       headers: cookieHeader ? { Cookie: cookieHeader } : {},
     });

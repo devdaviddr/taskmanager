@@ -41,5 +41,5 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
 
   // Attach user to context
   c.set('user', user);
-  await next();
+  return await next();
 };

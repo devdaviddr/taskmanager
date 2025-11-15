@@ -43,6 +43,23 @@ export class ColumnController {
         return c.json({ error: 'Invalid board ID' }, 400);
       }
 
+      const user = c.get('user');
+      
+      // Check board ownership
+      try {
+        await checkBoardOwnership(boardId, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
+      }
+
       const body: CreateColumnRequest = await c.req.json();
 
       const column = await ColumnService.createColumn(boardId, body);

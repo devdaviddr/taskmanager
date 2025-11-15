@@ -27,7 +27,7 @@ describe('Column API', () => {
       const user = await auth.register();
       const result = await columns.create(99999, testData.validColumn, user.accessToken);
 
-      expect(result.status).toBe(500);
+      expect(result.status).toBe(404);
     });
 
     test('Create column fails with missing name', async () => {

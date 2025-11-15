@@ -78,6 +78,26 @@ export class ItemController {
         return c.json({ error: 'Invalid column ID' }, 400);
       }
 
+      const user = c.get('user');
+      
+      // Check board ownership via column
+      try {
+        await checkBoardOwnershipViaColumn(columnId, user.id);
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === 'Column not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Board not found') {
+            return c.json({ error: error.message }, 404);
+          }
+          if (error.message === 'Access denied') {
+            return c.json({ error: error.message }, 403);
+          }
+        }
+        throw error;
+      }
+
       const body: CreateItemRequest = await c.req.json();
 
       // Parse dates from strings
@@ -93,6 +113,10 @@ export class ItemController {
       console.error('Controller error - create item:', error);
       if (error instanceof Error && error.message.includes('Validation error')) {
         return c.json({ error: error.message }, 400);
+      }
+      // Check for database constraint violations (foreign key, etc.)
+      if (error instanceof Error && error.message.includes('violates foreign key constraint')) {
+        return c.json({ error: 'Invalid column ID' }, 400);
       }
       return c.json({ error: 'Internal server error' }, 500);
     }

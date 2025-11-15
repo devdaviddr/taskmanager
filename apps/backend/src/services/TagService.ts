@@ -41,9 +41,9 @@ export class TagService {
       return await TagModel.create(tagData);
     } catch (error) {
       console.error('Service error - createTag:', error);
-      if (error instanceof Error && (error.message.includes('validation') || error.message === 'Tag with this name already exists')) {
-        throw error;
-      }
+       if (error instanceof Error && (error.message.toLowerCase().includes('validation') || error.message === 'Tag with this name already exists')) {
+         throw error;
+       }
       throw new Error('Failed to create tag');
     }
   }
@@ -68,9 +68,9 @@ export class TagService {
       return tag;
     } catch (error) {
       console.error('Service error - updateTag:', error);
-      if (error instanceof Error && (error.message === 'Tag not found or no changes made' || error.message.includes('validation') || error.message === 'Tag with this name already exists')) {
-        throw error;
-      }
+       if (error instanceof Error && (error.message === 'Tag not found or no changes made' || error.message.toLowerCase().includes('validation') || error.message === 'Tag with this name already exists')) {
+         throw error;
+       }
       throw new Error('Failed to update tag');
     }
   }
