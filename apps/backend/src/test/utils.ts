@@ -36,19 +36,39 @@ export const parseResponse = async (response: Response) => {
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Test data factories
+const createValidUser = () => ({
+  email: `testuser${Date.now()}${Math.random()}@example.com`,
+  password: 'TestPassword123!@#',
+  name: 'Test User',
+});
+
+const createValidUser2 = () => ({
+  email: `testuser2${Date.now()}${Math.random()}@example.com`,
+  password: 'TestPassword456!@#',
+  name: 'Test User 2',
+});
+
 export const testData = {
-  validUser: {
-    email: 'testuser@example.com',
-    password: 'TestPassword123!@#',
-    name: 'Test User',
+  get validUser() {
+    return createValidUser();
   },
-  validUser2: {
-    email: 'testuser2@example.com',
-    password: 'TestPassword456!@#',
-    name: 'Test User 2',
+  get validUser2() {
+    return createValidUser2();
   },
   invalidPassword: 'weak',
   invalidEmail: 'not-an-email',
+  validBoard: {
+    name: 'Test Board',
+    description: 'A test board for integration tests',
+    background: 'bg-blue-50',
+    column_theme: 'light',
+  },
+  validBoard2: {
+    name: 'Test Board 2',
+    description: 'Another test board',
+    background: 'bg-green-50',
+    column_theme: 'dark',
+  },
 };
 
 // Authentication helpers
@@ -151,6 +171,113 @@ export const auth = {
       data,
       accessToken: undefined,
       refreshToken: undefined,
+    };
+  },
+};
+
+// Board API helpers
+export const boards = {
+  /**
+   * Create a new board
+   */
+  async create(boardData = testData.validBoard, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request('/api/boards', {
+      method: 'POST',
+      body: JSON.stringify(boardData),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Get all boards for authenticated user
+   */
+  async getAll(accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request('/api/boards', {
+      method: 'GET',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Get a specific board by ID
+   */
+  async getById(boardId: number, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/boards/${boardId}`, {
+      method: 'GET',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Get board with all its columns
+   */
+  async getWithColumns(boardId: number, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/boards/${boardId}/full`, {
+      method: 'GET',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Update a board
+   */
+  async update(boardId: number, updates: any, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/boards/${boardId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
+    };
+  },
+
+  /**
+   * Delete a board
+   */
+  async delete(boardId: number, accessToken?: string) {
+    const cookieHeader = accessToken ? `accessToken=${accessToken}` : '';
+    const res = await app.request(`/api/boards/${boardId}`, {
+      method: 'DELETE',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
+    });
+    const data = await parseResponse(res);
+    return {
+      status: res.status,
+      data,
     };
   },
 };

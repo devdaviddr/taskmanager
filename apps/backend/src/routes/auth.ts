@@ -38,7 +38,7 @@ authRoutes.post('/register', async (c) => {
       user: result.user,
       // Only return token in response for non-production environments
       ...(isProduction ? {} : { token: result.token, refreshToken: result.refreshToken }),
-    });
+    }, 201);
     
     // Set httpOnly cookies
     response.headers.append('Set-Cookie', `accessToken=${result.token}; HttpOnly; Secure; SameSite=Strict; Max-Age=${60 * 60}; Path=/`);
