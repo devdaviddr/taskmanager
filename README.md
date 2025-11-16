@@ -20,7 +20,7 @@ A modern, full-stack task management application built with React, TypeScript, N
 ## 🛠 Tech Stack
 
 **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, React Router, React Query  
-**Backend**: Node.js, Hono, TypeScript, PostgreSQL  
+**Backend**: Node.js, Hono, TypeScript, PostgreSQL, Vitest  
 **DevOps**: Docker, ESLint, npm workspaces
 
 ## 🚀 Getting Started
@@ -67,6 +67,22 @@ A modern, full-stack task management application built with React, TypeScript, N
    ```bash
    npm run dev  # Starts both frontend and backend
    ```
+
+## 🧪 Testing
+
+The backend uses Vitest for unit and integration testing.
+
+To run integration tests:
+
+```bash
+npm run test --workspace=apps/backend
+```
+
+To run tests with coverage:
+
+```bash
+npm run test:coverage --workspace=apps/backend
+```
 
 ## 📄 License
 
