@@ -16,11 +16,12 @@ A modern, full-stack task management application built with React, TypeScript, N
 - **Responsive Design**: Mobile-first approach with Tailwind CSS
 - **Real-time Updates**: Live synchronization across devices
 - **Docker Support**: Containerized deployment
+- **API Documentation**: Interactive Swagger UI at /docs
 
 ## 🛠 Tech Stack
 
 **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, React Router, React Query  
-**Backend**: Node.js, Hono, TypeScript, PostgreSQL, Vitest  
+**Backend**: Node.js, Hono, TypeScript, PostgreSQL, Vitest, OpenAPI  
 **DevOps**: Docker, ESLint, npm workspaces
 
 ## 🚀 Getting Started
@@ -50,6 +51,7 @@ A modern, full-stack task management application built with React, TypeScript, N
 4. **Access the application**
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:3001
+   - API Documentation: http://localhost:3001/docs
 
 ### Local Development Setup
 
